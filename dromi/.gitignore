@@ -1,0 +1,8 @@
+.idea/*
+dist/
+
+src/dromi.egg-info/
+*.npy
+*.png
+
+src/dromi/__pycache__/
