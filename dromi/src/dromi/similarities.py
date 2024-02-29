@@ -422,11 +422,6 @@ def process_value(iterables_args,fixed_args):
         kmers_matrix_cosine_diag_ij,\
         start_store_point,end_store_point,start_store_point_i,end_store_point_i
 
-def inner_loop(params):
-    """Auxiliary function to SimilarityParallel"""
-    iterables, fixed = params
-    return process_value(iterables,fixed_args=fixed)
-
 class SimilarityParallel:
    def __init__(self,iterables,fixed_args):
        self.fixed = fixed_args
@@ -440,8 +435,12 @@ class SimilarityParallel:
        self.start_store_points_i = iterables["start_store_points_i"]
        self.iterables = self.i_idx,self.j_idx,self.shifts,self.start_store_points,self.end_store_points,self.store_point_helpers,self.start_store_points_i,self.end_store_points_i
 
+   def inner_loop(self,params):
+       """Auxiliary function to SimilarityParallel"""
+       iterables, fixed = params
+       return process_value(iterables, fixed_args=fixed)
    def outer_loop(self, pool):
-       return list(pool.map(inner_loop, list(zip(zip(*self.iterables), itertools.repeat(self.fixed)))))
+       return list(pool.map(self.inner_loop, list(zip(zip(*self.iterables), itertools.repeat(self.fixed)))))
 
 def fill_array(array_fixed,ij,start,end,start_i,end_i):
     """Fill batch result in the corresponding slot

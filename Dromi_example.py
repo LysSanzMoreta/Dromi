@@ -84,8 +84,8 @@ def example_mutual_information():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dromi args",formatter_class=RawTextHelpFormatter)
 
-    #example_blosum_encoded_sequences()
+    example_blosum_encoded_sequences()
 
-    example_mutual_information()
+    #example_mutual_information()
 
 

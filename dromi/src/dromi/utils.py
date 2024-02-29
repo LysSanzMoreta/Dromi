@@ -430,59 +430,14 @@ class RunParallel:
    def __init__(self,iterables,fixed_args,mappable):
        self.mappable = mappable
        self.fixed = fixed_args
-       # self.i_idx = iterables["i_idx"]
-       # self.j_idx = iterables["j_idx"]
-       # self.shifts = iterables["shifts"]
-       # self.start_store_points = iterables["start_store_points"]
-       # self.end_store_points = iterables["end_store_points"]
-       # self.store_point_helpers = iterables["store_point_helpers"]
-       # self.end_store_points_i = iterables["end_store_points_i"]
-       # self.start_store_points_i = iterables["start_store_points_i"]
-       # self.iterables = self.i_idx,
-       #                  self.j_idx,
-       #                  self.shifts,
-       #                  self.start_store_points,
-       #                  self.end_store_points,
-       #                  self.store_point_helpers,
-       #                  self.start_store_points_i,
-       #                  self.end_store_points_i
-
        self.iterables = tuple(iterables.values()) #python dictionaries seem to preserve order now ...
 
 
    def inner_loop(self,params):
-       """Auxiliary function to SimilarityParallel"""
+       """"""
        iterables, fixed = params
        return self.mappable(iterables, fixed_args=fixed)
 
    def outer_loop(self, pool):
        return list(pool.map(self.inner_loop, list(zip(zip(*self.iterables), itertools.repeat(self.fixed)))))
 
-class FillArray:
-    def __init__(self):
-        pass
-
-    def fill_array(self,array_fixed, ij, start, end, start_i, end_i):
-        """Fill batch result in the corresponding slot
-        :param array_fixed: Empty array
-        :param ij: Pre-computed result (array) that will fill it the correct slot in the array_fixed
-        :param int start: Indicates the row-wise start position where this batch is allocated
-        :param int end: Indicates the row-wise end position where this batch is allocated
-        :param int start_i: Indicates the column-wise start position where this batch is allocated
-        :param int end_i: Indicates the column-wise end position where this batch is allocated
-        """
-        array_fixed[start:end, start_i:end_i] = ij
-        return array_fixed
-
-    def fill_array_map(self,array_fixed, ij_arrays, starts, ends, starts_i, ends_i):
-        """Fills the empty matrix with the results of each batch
-       :param array_fixed: Empty array to fill in
-       :param ij_arrays: Pre-computed result that will fill it the correct slot in the array_fixed
-       :param int start: Indicates the row-wise start position where this batch is allocated
-       :param int end: Indicates the row-wise end position where this batch is allocated
-       :param int start_i: Indicates the column-wise start position where this batch is allocated
-       :param int end_i: Indicates the column-wise end position where this batch is allocated
-        """
-        results = list(map(lambda ij, start, end, start_i, end_i: self.fill_array(array_fixed, ij, start, end, start_i, end_i),ij_arrays, starts, ends, starts_i, ends_i))
-
-        return results[0]
