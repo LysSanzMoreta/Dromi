@@ -9,5 +9,10 @@ python3 -m pip install --upgrade twine
 
 cd folder with the file setup.py
 python -m build
-python -m twine upload --repository pypi dist/* -u ... -p ... # for new version of package python -m twine upload --skip-existing --repository pypi dist/* -u ... -p ... #to re-upload same version
+python -m twine upload --repository pypi dist/* -u __token__ -p ...
+
+#NOTES:
+# for password now we have to first enable 2FA and then generate an API token for this project
+# for new version of package (to re-upload same package version):
+#     python -m twine upload --skip-existing --repository pypi dist/* -u ... -p ...
 
