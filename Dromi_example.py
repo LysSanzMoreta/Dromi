@@ -8,6 +8,7 @@ import os,sys,argparse
 import time
 import datetime
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 from argparse import RawTextHelpFormatter
 import numpy as np
@@ -20,6 +21,7 @@ else:#pip installed module
      import dromi
 import dromi.utils as DromiUtils
 import dromi.similarities as DromiSimilarities
+import dromi.mutual_information as DromiMI
 
 print("Loading dromi module from {}".format(dromi.__file__))
 def plot_heatmap(array, title,file_name):
@@ -39,8 +41,6 @@ def example_blosum_encoded_sequences(unique_characters=21,random_seqs=False):
     """The similarity computations are performed excluding self similarity. The current position is compared to the other positions in the same site.
     NOTE: I have only implemented similarity matrix with paddings at the end, if requested I might look into paddings with other distributions
     """
-
-
     if random_seqs:
         random_result = DromiUtils.SequenceRandomGeneration(["".join(["A"] * 40)] * 300, 50, "no_padding").run()
         seqs, sequences_padded = zip(*random_result)
@@ -74,11 +74,18 @@ def example_blosum_encoded_sequences(unique_characters=21,random_seqs=False):
     plot_heatmap(results.kmers_pid_similarity,"HEATMAP Kmers percent identity mean","{}/HEATMAP_kmers_pid_similarity".format(storage_folder))
     plot_heatmap(results.kmers_cosine_similarity_mean,"HEATMAP Kmers cosine similarity mean","{}/HEATMAP_kmers_cosine_similarity_mean".format(storage_folder))
 
+def example_mutual_information():
+    """On disk computation of Mutual information between continuous random variables"""
+
+    gene_expression_matrix = np.random.rand(1000,1000)
+    DromiMI.calculate_mutual_information(gene_expression_matrix)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dromi args",formatter_class=RawTextHelpFormatter)
 
-    example_blosum_encoded_sequences()
+    #example_blosum_encoded_sequences()
+
+    example_mutual_information()
 
 

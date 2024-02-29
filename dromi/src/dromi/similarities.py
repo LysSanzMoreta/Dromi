@@ -12,6 +12,8 @@ import datetime
 import numpy as np
 import multiprocessing
 from collections import namedtuple
+import dromi
+import dromi.utils as DromiUtils
 SimilarityResults = namedtuple("SimilarityResults",["positional_weights","percent_identity_mean","cosine_similarity_mean","kmers_pid_similarity","kmers_cosine_similarity_mean"])
 
 def cosine_similarity(a,b,correlation_matrix=False,parallel=False): #TODO: import from utils?
@@ -469,7 +471,7 @@ def calculate_similarities(array, max_len, array_mask, storage_folder,batch_size
     """Batched method to calculate the cosine similarity and percent identity/pairwise distance between the (vector) encoded sequences.
     :param ndarray array: Numpy array of Vector encoded sequences [N,max_len,vector_dim], where N is the number of sequences in the array and vector_dim is the dimension if the encodings
     :param int max_len: Longest sequence in the array
-    :param ndarray array_mask: Mask to indicate the paddings, where False means padding, True otherwise
+    :param ndarray array_mask: Boolean mask to indicate the paddings, where False means padding, True otherwise
     :param str storage_folder: Path to folder where to store the results
     :param batch_size: Number of sequences per batch, it automatically corrects for uneven splits
     :param int ksize: Kmer size
@@ -491,6 +493,7 @@ def calculate_similarities(array, max_len, array_mask, storage_folder,batch_size
         print("Empty array")
     else:
         assert array_mask.shape == (n_data,max_len), "Your dataset mask has dimensions {}, while max_len is {}".format(array_mask.shape,max_len)
+        #assert array_mask.dtype == np.bool, "Please define the mask as a boolean, where True indicates amino acid and False padding"
         assert batch_size <= n_data, "Please select a smaller batch size, current is {}. while dataset size is {}".format(batch_size,n_data)
         assert array.ndim == 3, "Please encode your sequences with ndim =3 ,such that if you have a 1 dimensional vector they will be encoded as [N,max_len,1]"
         split_size = [int(array.shape[0] / batch_size) if not batch_size > array.shape[0] else 1][0]
@@ -519,56 +522,57 @@ def calculate_similarities(array, max_len, array_mask, storage_folder,batch_size
         #kmers_cosine_similarity_matrix_diag = np.zeros((n_data, n_data,nkmers,nkmers,ksize),dtype=np.uint16) #TODO: Reduce memory consumption
         #Highlight: Initialize the list of indexes for parallel computation
         # Iterables
-        idx = list(range(len(splits)))
-        shifts = []
-        start_store_points = []
-        start_store_points_i = []
-        store_point_helpers = []
-        end_store_points = []
-        end_store_points_i = []
-        i_idx = []
-        j_idx = []
-        start_store_point = 0
-        store_point_helper = 0
-        end_store_point = splits[0].shape[0]
-        for i in idx:
-            shift = i
-            rest_splits = splits.copy()[shift:]
-            start_store_point_i = 0 + store_point_helper
-            end_store_point_i = rest_splits[0].shape[0] + store_point_helper  # initialize
-            for j, r_j in enumerate(
-                    rest_splits):  # calculate distance among all kmers per sequence in the block (n, n_kmers,n_kmers)
-                i_idx.append(i)
-                shifts.append(shift)
-                j_idx.append(j)
-                start_store_points.append(start_store_point)
-                store_point_helpers.append(store_point_helper)
-                end_store_points.append(end_store_point)
-                start_store_points_i.append(start_store_point_i)
-                end_store_points_i.append(end_store_point_i)
-                start_store_point_i = end_store_point_i  # + store_point_helper
-                if j + 1 < len(rest_splits):
-                    end_store_point_i += rest_splits[j + 1].shape[0]  # + store_point_helper# it has to be the next r_j
-            start_store_point = end_store_point
-            if i + 1 < len(splits):
-                store_point_helper += splits[i + 1].shape[0]
-            if i + 1 != len(splits):
-                end_store_point += splits[i + 1].shape[0]  # it has to be the next curr_array
-            else:
-                pass
-
+        # idx = list(range(len(splits)))
+        # shifts = []
+        # start_store_points = []
+        # start_store_points_i = []
+        # store_point_helpers = []
+        # end_store_points = []
+        # end_store_points_i = []
+        # i_idx = []
+        # j_idx = []
+        # start_store_point = 0
+        # store_point_helper = 0
+        # end_store_point = splits[0].shape[0]
+        # for i in idx:
+        #     shift = i
+        #     rest_splits = splits.copy()[shift:]
+        #     start_store_point_i = 0 + store_point_helper
+        #     end_store_point_i = rest_splits[0].shape[0] + store_point_helper  # initialize
+        #     for j, r_j in enumerate(
+        #             rest_splits):  # calculate distance among all kmers per sequence in the block (n, n_kmers,n_kmers)
+        #         i_idx.append(i)
+        #         shifts.append(shift)
+        #         j_idx.append(j)
+        #         start_store_points.append(start_store_point)
+        #         store_point_helpers.append(store_point_helper)
+        #         end_store_points.append(end_store_point)
+        #         start_store_points_i.append(start_store_point_i)
+        #         end_store_points_i.append(end_store_point_i)
+        #         start_store_point_i = end_store_point_i  # + store_point_helper
+        #         if j + 1 < len(rest_splits):
+        #             end_store_point_i += rest_splits[j + 1].shape[0]  # + store_point_helper# it has to be the next r_j
+        #     start_store_point = end_store_point
+        #     if i + 1 < len(splits):
+        #         store_point_helper += splits[i + 1].shape[0]
+        #     if i + 1 != len(splits):
+        #         end_store_point += splits[i + 1].shape[0]  # it has to be the next curr_array
+        #     else:
+        #         pass
+        #
         start = time.time()
         args_fixed = splits, mask_splits, n_data,max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers
-        args_iterables = {"i_idx":i_idx,
-                          "j_idx":j_idx,
-                          "shifts":shifts,
-                          "start_store_points":start_store_points,
-                          "start_store_points_i": start_store_points_i,
-                          "store_point_helpers":store_point_helpers,
-                          "end_store_points":end_store_points,
-                          "end_store_points_i": end_store_points_i
-                          }
+        # args_iterables = {"i_idx":i_idx,
+        #                   "j_idx":j_idx,
+        #                   "shifts":shifts,
+        #                   "start_store_points":start_store_points,
+        #                   "start_store_points_i": start_store_points_i,
+        #                   "store_point_helpers":store_point_helpers,
+        #                   "end_store_points":end_store_points,
+        #                   "end_store_points_i": end_store_points_i
+        #                   }
 
+        args_iterables = DromiUtils.retrieve_iterable_indexes(splits)
 
         with multiprocessing.Pool(multiprocessing.cpu_count() - 1) as pool:
             results = SimilarityParallel(args_iterables,args_fixed).outer_loop(pool)

@@ -9,6 +9,7 @@ import numpy as np
 from collections import defaultdict
 import warnings
 import Bio.Align
+import itertools
 def aminoacid_names_dict(aa_types,zero_characters = []):
     """ Returns an aminoacid associated to a integer value
     All of these values are mapped to 0:
@@ -81,8 +82,17 @@ def create_blosum(aa_types,subs_matrix_name,zero_characters=[],include_zero_char
     #blosum_array_dict[0] = np.full((aa_types),0)  #np.nan == np.nan is False ...
 
     return subs_array, subs_dict, blosum_array_dict
+
 class SequencePadding(object):
-    """Performs padding of a list of given sequences to a given len"""
+    """Performs padding of a list of given sequences to a given len
+        :param sequences: list of list of strings (it can be meaningless since they will be overwritten
+        :param int seq_max_len: Maximum sequence length, determines the inserted paddings
+        :param method: Padding method
+                <no_padding>: Use when all the sequences have the same length, since it does ot add paddings (#) -> ATRVS
+                <ends>: padds the sequences at the end -> ATRVS######
+                <random>: Inserts random paddings given  a sequence maximum length -> A#T#RV##S###
+                <borders>: Inserts paddings left and right of the sequence, leaving the sequence centered centered -> ###ATRVS###
+                <replicated_borders>: Replicates the sequences left and right borders to fit a maximum length, some parts of the process are random -> ATRATRVSVS """
     def __init__(self,sequences,seq_max_len,method,shuffle):
         self.sequences = sequences
         self.seq_max_len = seq_max_len
@@ -214,12 +224,21 @@ class SequencePadding(object):
             return (new_seq.tolist(), new_seq_mask.tolist())
         else:
             return (seq,seq)
+
 class SequenceRandomGeneration(object):
-    """Generates random sequences given a sequence length"""
-    def __init__(self,sequences,seq_max_len,method):
+    """Generates random sequences given a sequence length
+    :param sequences: list of list of strings (it can be meaningless since they will be overwritten
+    :param int seq_max_len: Maximum sequence length, determines the inserted paddings
+    :param method: Padding method
+                <no_padding>: Use when all the sequences have the same length, since it does ot add paddings (#) -> ATRVS
+                <ends>: padds the sequences at the end -> ATRVS######
+                <random>: Inserts random paddings given  a sequence maximum length -> A#T#RV##S###
+                <borders>: Inserts paddings left and right of the sequence, leaving the sequence centered centered -> ###ATRVS###
+                <replicated_borders>: Replicates the sequences left and right borders to fit a maximum length, some parts of the process are random -> ATRATRVSVS """
+    def __init__(self,sequences,seq_max_len,padding_method):
         self.sequences = sequences
         self.seq_max_len = seq_max_len
-        self.method = method
+        self.padding_method = padding_method
         self.random_seeds = list(range(len(sequences)))
         self.aminoacids_list = np.array(list(aminoacid_names_dict(20).keys()))
 
@@ -232,30 +251,32 @@ class SequenceRandomGeneration(object):
         #                     "replicated_borders":list(map(lambda seq,seed: self.replicated_border_padding(seq,seed, self.seq_max_len), self.sequences,self.random_seeds))
         #                     }
 
-        if self.method == "no_padding":
+        if self.padding_method == "no_padding":
             result = list(map(lambda seq,seed: self.no_padding(seq,seed, self.seq_max_len),self.sequences,self.random_seeds))
-        elif self.method == "ends":
+        elif self.padding_method == "ends":
             result = list(map(lambda seq,seed: self.ends_padding(seq,seed, self.seq_max_len),self.sequences,self.random_seeds))
-        elif self.method == "random":
+        elif self.padding_method == "random":
             result = list(map(lambda seq,seed: self.random_padding(seq,seed, self.seq_max_len), self.sequences,self.random_seeds))
-        elif self.method == "borders":
+        elif self.padding_method == "borders":
             result = list(map(lambda seq,seed: self.border_padding(seq,seed, self.seq_max_len), self.sequences,self.random_seeds))
-        elif self.method == "replicated_borders":
+        elif self.padding_method == "replicated_borders":
             result = list(map(lambda seq,seed: self.replicated_border_padding(seq,seed, self.seq_max_len), self.sequences,self.random_seeds))
         else:
             raise ValueError(
                 "Padding method <{}> not implemented, please choose among <no_padding,ends,random,borders,replicated_borders>".format(
-                    self.method))
+                    self.padding_method))
 
         return result
 
     def no_padding(self,seq,seed,max_len):
+        """creates a random sequence with no paddings"""
         np.random.seed(seed)
         seq = self.aminoacids_list[np.random.choice(len(self.aminoacids_list),len(seq))]
         return (list(seq),list(seq))
 
 
     def ends_padding(self,seq,seed,max_len):
+        """Creates a random sequence with paddings at the end"""
         np.random.seed(seed)
         seq = self.aminoacids_list[np.random.choice(len(self.aminoacids_list), len(seq))]
         seq = "".join(seq)
@@ -353,3 +374,115 @@ class SequenceRandomGeneration(object):
             return (new_seq.tolist(), new_seq_mask.tolist())
         else:
             return (seq,seq)
+
+def retrieve_iterable_indexes(splits):
+    idx = list(range(len(splits)))
+    shifts = []
+    start_store_points = []
+    start_store_points_i = []
+    store_point_helpers = []
+    end_store_points = []
+    end_store_points_i = []
+    i_idx = []
+    j_idx = []
+    start_store_point = 0
+    store_point_helper = 0
+    end_store_point = splits[0].shape[0]
+    for i in idx:
+        shift = i
+        rest_splits = splits.copy()[shift:]
+        start_store_point_i = 0 + store_point_helper
+        end_store_point_i = rest_splits[0].shape[0] + store_point_helper  # initialize
+        for j, r_j in enumerate(
+                rest_splits):  # calculate distance among all kmers per sequence in the block (n, n_kmers,n_kmers)
+            i_idx.append(i)
+            shifts.append(shift)
+            j_idx.append(j)
+            start_store_points.append(start_store_point)
+            store_point_helpers.append(store_point_helper)
+            end_store_points.append(end_store_point)
+            start_store_points_i.append(start_store_point_i)
+            end_store_points_i.append(end_store_point_i)
+            start_store_point_i = end_store_point_i  # + store_point_helper
+            if j + 1 < len(rest_splits):
+                end_store_point_i += rest_splits[j + 1].shape[0]  # + store_point_helper# it has to be the next r_j
+        start_store_point = end_store_point
+        if i + 1 < len(splits):
+            store_point_helper += splits[i + 1].shape[0]
+        if i + 1 != len(splits):
+            end_store_point += splits[i + 1].shape[0]  # it has to be the next curr_array
+        else:
+            pass
+
+    args_iterables = {"i_idx": i_idx,
+                      "j_idx": j_idx,
+                      "shifts": shifts,
+                      "start_store_points": start_store_points,
+                      "end_store_points": end_store_points,
+                      "store_point_helpers": store_point_helpers,
+                      "start_store_points_i": start_store_points_i,
+                      "end_store_points_i": end_store_points_i
+                      }
+
+    return args_iterables
+
+class RunParallel:
+   def __init__(self,iterables,fixed_args,mappable):
+       self.mappable = mappable
+       self.fixed = fixed_args
+       # self.i_idx = iterables["i_idx"]
+       # self.j_idx = iterables["j_idx"]
+       # self.shifts = iterables["shifts"]
+       # self.start_store_points = iterables["start_store_points"]
+       # self.end_store_points = iterables["end_store_points"]
+       # self.store_point_helpers = iterables["store_point_helpers"]
+       # self.end_store_points_i = iterables["end_store_points_i"]
+       # self.start_store_points_i = iterables["start_store_points_i"]
+       # self.iterables = self.i_idx,
+       #                  self.j_idx,
+       #                  self.shifts,
+       #                  self.start_store_points,
+       #                  self.end_store_points,
+       #                  self.store_point_helpers,
+       #                  self.start_store_points_i,
+       #                  self.end_store_points_i
+
+       self.iterables = tuple(iterables.values()) #python dictionaries seem to preserve order now ...
+
+
+   def inner_loop(self,params):
+       """Auxiliary function to SimilarityParallel"""
+       iterables, fixed = params
+       return self.mappable(iterables, fixed_args=fixed)
+
+   def outer_loop(self, pool):
+       return list(pool.map(self.inner_loop, list(zip(zip(*self.iterables), itertools.repeat(self.fixed)))))
+
+class FillArray:
+    def __init__(self):
+        pass
+
+    def fill_array(self,array_fixed, ij, start, end, start_i, end_i):
+        """Fill batch result in the corresponding slot
+        :param array_fixed: Empty array
+        :param ij: Pre-computed result (array) that will fill it the correct slot in the array_fixed
+        :param int start: Indicates the row-wise start position where this batch is allocated
+        :param int end: Indicates the row-wise end position where this batch is allocated
+        :param int start_i: Indicates the column-wise start position where this batch is allocated
+        :param int end_i: Indicates the column-wise end position where this batch is allocated
+        """
+        array_fixed[start:end, start_i:end_i] = ij
+        return array_fixed
+
+    def fill_array_map(self,array_fixed, ij_arrays, starts, ends, starts_i, ends_i):
+        """Fills the empty matrix with the results of each batch
+       :param array_fixed: Empty array to fill in
+       :param ij_arrays: Pre-computed result that will fill it the correct slot in the array_fixed
+       :param int start: Indicates the row-wise start position where this batch is allocated
+       :param int end: Indicates the row-wise end position where this batch is allocated
+       :param int start_i: Indicates the column-wise start position where this batch is allocated
+       :param int end_i: Indicates the column-wise end position where this batch is allocated
+        """
+        results = list(map(lambda ij, start, end, start_i, end_i: self.fill_array(array_fixed, ij, start, end, start_i, end_i),ij_arrays, starts, ends, starts_i, ends_i))
+
+        return results[0]
