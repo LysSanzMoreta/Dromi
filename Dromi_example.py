@@ -31,7 +31,8 @@ def plot_heatmap(array, title,file_name):
     :param file_name"""
     print("Visualizing heatmap...")
     fig = plt.figure(figsize=(20, 20))
-    sns.heatmap(array, cmap='RdYlGn_r',yticklabels=False,xticklabels=False)
+    ax = sns.heatmap(array, cmap='RdYlGn_r',yticklabels=False,xticklabels=False)
+    ax.collections[0].set_clim(0, 1)
     plt.title(title,fontsize=20)
     plt.savefig(file_name)
     plt.clf()
@@ -47,8 +48,14 @@ def example_blosum_encoded_sequences(unique_characters=21,random_seqs=False):
         max_len = len(max(seqs, key=len))
 
     else:
-        seqs = ["AHPDYRMP"] * 500
-        #seqs = ["AHPDYRMP","AHPHYRM","AKPDYRM","AHPDYRM","AHPDYRM","FYRA","MRSTVI"]
+        seqs = ["AHPDYRMPIL"] * 20000
+        # seqs = ["AHPDYRM",
+        #         "AHPHYRM",
+        #         "AKPDYRM",
+        #         "AHPDYRM",
+        #         "AHPDYRM",
+        #         "FYRA",
+        #         "MRSTVI"]
         max_len = len(max(seqs, key=len))
 
         padding_result = DromiUtils.SequencePadding(seqs, max_len, method="ends",shuffle=False).run()
@@ -65,7 +72,7 @@ def example_blosum_encoded_sequences(unique_characters=21,random_seqs=False):
     sequences_mask = sequences_int.astype(bool)
     storage_folder = "{}".format(script_dir)
     start = time.time()
-    results = DromiSimilarities.calculate_similarities(sequences_blosum,max_len,sequences_mask,storage_folder,batch_size=100,ksize=3,neighbours=1)
+    results = DromiSimilarities.calculate_similarities_ondisk(sequences_blosum,max_len,sequences_mask,storage_folder,batch_size=500,ksize=3,neighbours=1)
     stop = time.time()
     print("Finished in {}".format(str(datetime.timedelta(seconds=stop-start))))
     plot_heatmap(results.positional_weights,"HEATMAP Positional weights","{}/HEATMAP_positional_weights".format(storage_folder))
@@ -77,8 +84,15 @@ def example_blosum_encoded_sequences(unique_characters=21,random_seqs=False):
 def example_mutual_information():
     """On disk computation of Mutual information between continuous random variables"""
 
-    gene_expression_matrix = np.random.rand(1000,1000)
-    DromiMI.calculate_mutual_information(gene_expression_matrix)
+    gene_expression_matrix = np.random.rand(2000,503)
+    mi_results = DromiMI.calculate_mutual_information(gene_expression_matrix,bins=5)
+
+    results_dir = ""
+    name = ""
+    results_dir = "" if not results_dir else f"{results_dir}/"
+    name = "" if not name else f"_{name}"
+    np.save("{}Mutual_information{}.npy".format(results_dir, name), mi_results["mutual_information"])
+    np.save("{}Mutual_information_normalized{}.npy".format(results_dir,name),mi_results["normalized_mutual_information"])
 
 
 if __name__ == "__main__":

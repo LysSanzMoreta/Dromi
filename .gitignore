@@ -2,3 +2,6 @@
 *.npy
 .idea/*
 dist/*
+tmp_files/
+
+*.dat
