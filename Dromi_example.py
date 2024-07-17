@@ -56,6 +56,18 @@ def example_blosum_encoded_sequences(unique_characters=21,random_seqs=False):
         #         "AHPDYRM",
         #         "FYRA",
         #         "MRSTVI"]
+        # seqs = [
+        #         "RGICWMLV",
+        #         "RGICWMLV",
+        #         "RGVCWMLV",
+        #         "RGVCWMLV",
+        #         "RGACWMLV",
+        #         "RGACFMLV",
+        #         "RGLCYMLV",
+        #         "RGLCYMLV",
+        #         "RGICYMLV",
+        #         "RGICYMLV",
+        # ]
         max_len = len(max(seqs, key=len))
 
         padding_result = DromiUtils.SequencePadding(seqs, max_len, method="ends",shuffle=False).run()
@@ -72,7 +84,8 @@ def example_blosum_encoded_sequences(unique_characters=21,random_seqs=False):
     sequences_mask = sequences_int.astype(bool)
     storage_folder = "{}".format(script_dir)
     start = time.time()
-    results = DromiSimilarities.calculate_similarities_ondisk(sequences_blosum,max_len,sequences_mask,storage_folder,batch_size=500,ksize=3,neighbours=1)
+
+    results = DromiSimilarities.calculate_similarities_ondisk(sequences_blosum,max_len,sequences_mask,storage_folder,batch_size=300,ksize=3,neighbours=1)
     stop = time.time()
     print("Finished in {}".format(str(datetime.timedelta(seconds=stop-start))))
     plot_heatmap(results.positional_weights,"HEATMAP Positional weights","{}/HEATMAP_positional_weights".format(storage_folder))

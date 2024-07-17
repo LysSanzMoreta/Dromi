@@ -402,6 +402,7 @@ class SequenceRandomGeneration(object):
             return (seq,seq)
 
 def retrieve_iterable_indexes(splits):
+    #TODO: Compute with cumsum
     idx = list(range(len(splits)))
     shifts = []
     start_store_points = []
