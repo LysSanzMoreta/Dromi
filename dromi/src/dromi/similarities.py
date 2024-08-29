@@ -8,7 +8,7 @@ import functools
 import gc
 import itertools
 import operator
-import time,os,sys
+import time
 import datetime
 from typing import Union
 
@@ -205,7 +205,6 @@ def calculate_masked_mean_kmers(iterables_args,fixed_args): #TODO: Needs to be r
     hotspots_mask *= kmers_mask_split
     hotspots_masked_mean = np.ma.masked_array(hotspots_splits, mask=~hotspots_mask, fill_value=0.).mean(1)  # Highlight: In the mask if True means to mask and ignore!!!!
     hotspots_masked_mean = np.ma.masked_array(hotspots_masked_mean, mask=~kmers_mask_0, fill_value=0.).mean(2) #TODO: Should it be mean 3?
-
 
     del kmers_mask_0,kmers_mask,kmers_mask_split,hotspots_mask,hotspots_splits
     gc.collect()
@@ -544,7 +543,7 @@ def process_value(iterables_args,fixed_args):
         kmers_matrix_cosine_diag_ij,\
         start_store_point,end_store_point,start_store_point_i,end_store_point_i
 
-def process_value_ondisk(iterables_args,fixed_args):
+def process_value_ondisk(iterables_args,fixed_args): #TODO: Build common function between process_value and process_value_ondisk
     """Computes similarities metrics (pairwise identity, cosine similarity ... ) among a set of arrays"""
 
     i,j,shift,start_store_point,end_store_point,store_point_helper,start_store_point_i,end_store_point_i = iterables_args

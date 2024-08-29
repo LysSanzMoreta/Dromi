@@ -8,7 +8,6 @@ import os,sys,argparse
 import time
 import datetime
 import matplotlib.pyplot as plt
-import pandas as pd
 import seaborn as sns
 from argparse import RawTextHelpFormatter
 import numpy as np
@@ -48,7 +47,7 @@ def example_blosum_encoded_sequences(unique_characters=21,random_seqs=False):
         max_len = len(max(seqs, key=len))
 
     else:
-        seqs = ["AHPDYRMPIL"] * 20000
+        seqs = ["AHPDYRMPIL"] * 1000
         # seqs = ["AHPDYRM",
         #         "AHPHYRM",
         #         "AKPDYRM",
@@ -107,12 +106,22 @@ def example_mutual_information():
     np.save("{}Mutual_information{}.npy".format(results_dir, name), mi_results["mutual_information"])
     np.save("{}Mutual_information_normalized{}.npy".format(results_dir,name),mi_results["normalized_mutual_information"])
 
+def parse_args(parser):
+    parser.add_argument('-analysis', type=str, nargs='?', default="cosine",
+                        help='<cosine> \n'
+                             '<mutualinfo>')
+
+    args = parser.parse_args()
+
+    return args
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dromi args",formatter_class=RawTextHelpFormatter)
 
-    example_blosum_encoded_sequences()
-
-    #example_mutual_information()
+    args = parse_args(parser)
+    if args.analysis == "cosine":
+        example_blosum_encoded_sequences()
+    elif args.analysis == "mutualinfo":
+        example_mutual_information()
 
 

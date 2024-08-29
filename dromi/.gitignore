@@ -6,3 +6,5 @@ src/dromi.egg-info/
 *.png
 
 src/dromi/__pycache__/
+
+tmp_files/*
