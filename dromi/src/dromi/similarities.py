@@ -19,26 +19,32 @@ import dromi
 import dromi.utils as DromiUtils
 SimilarityResults = namedtuple("SimilarityResults",["positional_weights","percent_identity_mean","cosine_similarity_mean","kmers_pid_similarity","kmers_cosine_similarity_mean"])
 
-def cosine_similarity(a,b,correlation_matrix=False,parallel=False): #TODO: import from utils?
+
+def cosine_similarity(a, b, correlation_matrix=False, parallel=False):  # TODO: import from utils?
     """Calculates the cosine similarity between 2 arrays.
     :param numpy array a: (max_len,aa_types) or (num_seq,max_len, aa_types)
     :param numpy array b: (max_len,aa_types) or (num_seq,max_len, aa_types)
     :param bool:Calculate matrix correlation(as in numpy coorcoef)"""
+
     n_a = a.shape[0]
     n_b = b.shape[0]
     diff_sizes = False
     if n_a != n_b:
-        dummy_row = np.zeros((np.abs(n_a-n_b),) + a.shape[1:])
+        dummy_row = np.zeros((np.abs(n_a - n_b),) + a.shape[1:])
         diff_sizes = True
         if n_a < n_b:
-            a = np.concatenate((a,dummy_row),axis=0)
+            a = np.concatenate((a, dummy_row), axis=0)
         else:
-            b = np.concatenate((b,dummy_row),axis=0)
+            b = np.concatenate((b, dummy_row), axis=0)
+
     if np.ndim(a) == 1:
-        num = np.dot(a,b)
-        p1 = np.sqrt(np.sum(a**2)) #equivalent to p1 = np.linalg.norm(a)
-        p2 = np.sqrt(np.sum(b**2))
-        cosine_sim = num/(p1*p2)
+        num = np.dot(a, b)
+        p1 = np.sqrt(np.sum(a ** 2))  # equivalent to p1 = np.linalg.norm(a)
+        p2 = np.sqrt(np.sum(b ** 2))
+        p1_p2 = p1 * p2
+        p1_p2 = np.where(p1_p2 == 0, np.finfo(float).eps, p1_p2)  # avoid zero division issues
+        # cosine_sim = num / (p1 * p2)
+        cosine_sim = num / (p1_p2)
         return cosine_sim
 
     elif np.ndim(a) == 2:
@@ -46,33 +52,44 @@ def cosine_similarity(a,b,correlation_matrix=False,parallel=False): #TODO: impor
             b = b - b.mean(axis=1)[:, None]
             a = a - a.mean(axis=1)[:, None]
 
-        num = np.dot(a, b.T) #[seq_len,21]@[21,seq_len] = [seq_len,seq_len]
-        p1 =np.sqrt(np.sum(a**2,axis=1))[:,None] #[seq_len,1]
-        p2 = np.sqrt(np.sum(b ** 2, axis=1))[None, :] #[1,seq_len]
-        #print(p1*p2)
-        cosine_sim = num / (p1 * p2)
-        if parallel:
-            return cosine_sim[None,:]
-        else:
-            return cosine_sim
-    else: #TODO: use elipsis for general approach?
-        if correlation_matrix:
-            b = b - b.mean(axis=2)[:, :, None]
-            a = a - a.mean(axis=2)[:, :, None]
-        num = np.matmul(a[:, None], np.transpose(b, (0, 2, 1))[None,:]) #[n,n,seq_len,seq_len]
-        p1 = np.sqrt(np.sum(a ** 2, axis=2))[:, :, None] #Equivalent to np.linalg.norm(a,axis=2)[:,:,None]
-        p2 = np.sqrt(np.sum(b ** 2, axis=2))[:, None, :] #Equivalent to np.linalg.norm(b,axis=2)[:,None,:]
-        cosine_sim = num / (p1[:,None]*p2[None,:])
+        num = np.dot(a, b.T)  # [seq_len,21]@[21,seq_len] = [seq_len,seq_len]
+        p1 = np.sqrt(np.sum(a ** 2, axis=1))[:, None]  # + 1e-10#[seq_len,1] #equivalent to np.linalg.norm(a,axis=1)
+        # p1 = np.linalg.norm(a,axis=1)[:,None]
+        p2 = np.sqrt(np.sum(b ** 2, axis=1))[None, :]  # [1,seq_len]
+        # p2 = np.linalg.norm(b,axis=1)[None,:]
+        p1_p2 = p1 * p2
+        p1_p2 = np.where(p1_p2 == 0, np.finfo(float).eps, p1_p2)  # avoid zero division issues
+        # cosine_sim = num / (p1 * p2)
+        cosine_sim = num / (p1_p2)
 
-        if diff_sizes: #remove the dummy creation that was made avoid shape conflicts
-            remove = np.abs(n_a-n_b)
+        if diff_sizes:  # remove the dummy creation that was made avoid shape conflicts
+            remove = np.abs(n_a - n_b)
             if n_a < n_b:
                 cosine_sim = cosine_sim[:-remove]
             else:
-                cosine_sim = cosine_sim[:,:-remove]
+                cosine_sim = cosine_sim[:, :-remove]
+        if parallel:
+            return cosine_sim[None, :]
+        else:
+            return cosine_sim
+    else:  # TODO: use elipsis for general approach?
+        if correlation_matrix:
+            b = b - b.mean(axis=2)[:, :, None]
+            a = a - a.mean(axis=2)[:, :, None]
+        num = np.matmul(a[:, None], np.transpose(b, (0, 2, 1))[None, :])  # [n,n,seq_len,seq_len]
+        p1 = np.sqrt(np.sum(a ** 2, axis=2))[:, :, None] + 1e-10  # Equivalent to np.linalg.norm(a,axis=2)[:,:,None]
+        p2 = np.sqrt(np.sum(b ** 2, axis=2))[:, None, :] + 1e-10  # Equivalent to np.linalg.norm(b,axis=2)[:,None,:]
+
+        cosine_sim = num / (p1[:, None] * p2[None, :])
+
+        if diff_sizes:  # remove the dummy creation that was made avoid shape conflicts
+            remove = np.abs(n_a - n_b)
+            if n_a < n_b:
+                cosine_sim = cosine_sim[:-remove]
+            else:
+                cosine_sim = cosine_sim[:, :-remove]
 
         return cosine_sim
-
 def extract_windows_vectorized(array, clearing_time_index, max_time, sub_window_size,only_windows=True): #TODO: import from utils
     """
     Creates indexes to extract kmers from a sequence, such as:

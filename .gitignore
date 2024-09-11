@@ -5,3 +5,7 @@ dist/*
 tmp_files/
 
 *.dat
+
+__pycache__/
+
+build/
