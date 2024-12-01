@@ -3,6 +3,7 @@
 .idea/*
 dist/*
 tmp_files/
+data/*
 
 *.dat
 
