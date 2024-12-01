@@ -100,10 +100,12 @@ def example_blosum_encoded_sequences(unique_characters=21, random_seqs=False):
                                                            metric=args.metric,
                                                            calculate_kmers=args.calculate_kmers,
                                                            calculate_positional_weights=args.calculate_positional_weights)
+
+
     elif args.runtime == "disk":
         results = DromiSimilarities.calculate_similarities_ondisk(sequences_blosum, max_len, sequences_mask,
                                                                   storage_folder,
-                                                                  batch_size=300,
+                                                                  batch_size=1,
                                                                   ksize=3,
                                                                   neighbours=1,
                                                                   metric=args.metric,
@@ -112,10 +114,12 @@ def example_blosum_encoded_sequences(unique_characters=21, random_seqs=False):
 
     stop = time.time()
     print("Finished in {}".format(str(datetime.timedelta(seconds=stop - start))))
-
+    # TODO: fix odd batch division issue with the dummy row
+    # TODO: Positional weights are returned also when rgs.metric == <pairwise>
+    # TODO: Test runtime with and without deleting objects and gc.collect
     if args.metric in ["cosine", "all"]:
         print(results.cosine_similarity_mean)
-        exit()
+
         plot_heatmap(results.cosine_similarity_mean, "HEATMAP Cosine similarity mean",
                      "{}/HEATMAP_cosine_similarity_mean".format(storage_folder))
         if args.calculate_kmers:
@@ -129,7 +133,7 @@ def example_blosum_encoded_sequences(unique_characters=21, random_seqs=False):
             plot_heatmap(results.kmers_pid_similarity, "HEATMAP Kmers percent identity mean",
                          "{}/HEATMAP_kmers_pid_similarity".format(storage_folder))
 
-    if args.calculate_positional_weights:
+    if args.metric == "cosine" and args.calculate_positional_weights:
         plot_heatmap(results.positional_weights, "HEATMAP Positional weights",
                      "{}/HEATMAP_positional_weights".format(storage_folder))
 
@@ -179,12 +183,12 @@ def parse_args(parser):
                              '<similarities> \n'
                              '<mutualinfo>')
 
-    parser.add_argument('-runtime', type=str, nargs='?', default="ram",
+    parser.add_argument('-runtime', type=str, nargs='?', default="disk",
                         help='How to compute/store the calculations'
                              '<ram>: The chunked results are computed and accumulated on RAM \n'
                              '<disk>: The results arrays are initialized on disk and filled up with the chunked computations made by the RAM')
     parser.add_argument('-metric', type=str, nargs='?', default="all",
-                        help='Type of sequence similarities metric (cosine, percent identity), use when args.analysis == <similarities>'
+                        help='Type of sequence similarities metric (cosine, pairwise, use when args.analysis == <similarities>'
                              '<cosine> \n'
                              '<pairwise>: Percent identity \n'
                              '<all>: calculates both cosine and percent identity metrics')

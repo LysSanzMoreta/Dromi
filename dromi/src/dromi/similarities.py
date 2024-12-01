@@ -570,7 +570,7 @@ def process_value_cosine(iterables_args, fixed_args):
                                            diag_idx_nkmers[1]]
         kmers_cosine_similarity_ij = np.ma.masked_array(kmers_matrix_cosine_diag_mean_ij, mask=~kmers_mask_ij,
                                                         fill_value=0.).mean(axis=2)
-        del kmers_mask_ij, kmers_cosine_similarity_ij, kmers_mask_r_j
+        del kmers_mask_ij, kmers_mask_r_j
     else:
         kmers_cosine_similarity_ij, kmers_matrix_cosine_diag_ij = None, None
     if i == j:  # Highlight: When comparing an array to itself, round to nearest integer the diagonal values, due to precision issues, sometimes it computes 0.999999999 or 1.00000002 instead of 1.
@@ -932,7 +932,6 @@ def process_value_cosine_ondisk(iterables_args,
             np.copyto(results_files["kmers_cosine_similarity_mean"][start_store_point_i:end_store_point_i,
                       start_store_point:end_store_point], kmers_cosine_similarity_ij.astype(dtype).T,
                       where=mask.T)  # transpose
-            results_files["kmers_pid_similarity"].flush()
             results_files["kmers_cosine_similarity_mean"].flush()
 
         results_files["cosine_similarity_mean"].flush()
@@ -1080,11 +1079,10 @@ def process_value_pid_ondisk(iterables_args,
         # results_files["cosine_sim_pairwise_matrix"].flush()
         if calculate_kmers:
             results_files["kmers_pid_similarity"].flush()
-            results_files["kmers_cosine_similarity_mean"].flush()
             del kmers_pid_similarity_ij
     # lock.release()
 
-    del percent_identity_mean_ij, percent_identity_mean_ij
+    del percent_identity_mean_ij
     gc.collect()
 
 
@@ -1093,7 +1091,7 @@ def process_value_all_ondisk(iterables_args,
     """Computes similarities metrics (pairwise identity, cosine similarity ... ) among a set of arrays"""
 
     i, j, shift, start_store_point, end_store_point, store_point_helper, start_store_point_i, end_store_point_i = iterables_args
-    splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, dtype = fixed_args
+    splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, dtype, calculate_kmers = fixed_args
     print(" ------------  i: {}----------------------------".format(i))
     curr_array = splits[i]
     curr_mask = mask_splits[i]
@@ -1588,8 +1586,9 @@ def calculate_similarities_ondisk(array: Union[np.ndarray],
                 results_files["kmers_cosine_similarity_mean"] = kmers_cosine_similarity_mean
             else:
                 kmers_cosine_similarity_mean = None
-            percent_identity_mean = None
-            kmers_pid_similarity = None
+            if metric == "cosine":
+                percent_identity_mean = None
+                kmers_pid_similarity = None
         if calculate_positional_weights:
             positional_weights = np.memmap(f'{storage_folder}/tmp_files/positional_weights.dat', dtype=dtype, mode='w+',
                                            shape=(n_data, max_len))
@@ -1634,7 +1633,7 @@ def calculate_similarities_ondisk(array: Union[np.ndarray],
 
         # cosine_sim_pairwise_matrix = np.maximum(cosine_sim_pairwise_matrix, cosine_sim_pairwise_matrix.transpose(1,0,2,3))
         # positional_weights_kmers = importance_weight_kmers(kmers_cosine_similarity_matrix_diag,nkmers,ksize,max_len,array_mask,overlapping_kmers,batch_size)
-        if calculate_positional_weights:
+        if metric == "cosine" and calculate_positional_weights:
             positional_weights = importance_weight(cosine_sim_pairwise_matrix, max_len, array_mask, batch_size,
                                                    neighbours, dtype=dtype, runtime_option="ondisk",
                                                    initializer=init_pool_processes, init_args=(lock, results_files))
