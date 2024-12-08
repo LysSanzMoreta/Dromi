@@ -56,25 +56,25 @@ def example_blosum_encoded_sequences(unique_characters=21, random_seqs=False):
 
     else:
         # seqs = ["AHPDYRMPIL"] * 1000
-        # seqs = ["AHPDYRM",
-        #         "AHPHYRM",
-        #         "AKPDYRM",
-        #         "AHPDYRM",
-        #         "AHPDYRM",
-        #         "FYRA",
-        #         "MRSTVI"]
-        seqs = [
-            "RGICWMLV",
-            "RGICWMLV",
-            "RGVCWMLV",
-            "RGVCWMLV",
-            "RGACWMLV",
-            "RGACFMLV",
-            "RGLCYMLV",
-            "RGLCYMLV",
-            "RGICYMLV",
-            "RGICYMLV",
-        ]
+        seqs = ["AHPDYRM",
+                "AHPHYRM",
+                "AKPDYRM",
+                "AHPDYRM",
+                "AHPDYRM",
+                "FYRA",
+                "MRSTVI"]
+        # seqs = [
+        #     "RGICWMLV",
+        #     "RGICWMLV",
+        #     "RGVCWMLV",
+        #     "RGVCWMLV",
+        #     "RGACWMLV",
+        #     "RGACFMLV",
+        #     "RGLCYMLV",
+        #     "RGLCYMLV",
+        #     "RGICYMLV",
+        #     "RGICYMLV",
+        # ]
         max_len = len(max(seqs, key=len))
 
         padding_result = DromiUtils.SequencePadding(seqs, max_len, method="ends", shuffle=False).run()
@@ -94,7 +94,7 @@ def example_blosum_encoded_sequences(unique_characters=21, random_seqs=False):
 
     if args.runtime == "ram":
         results = DromiSimilarities.calculate_similarities(sequences_blosum, max_len, sequences_mask, storage_folder,
-                                                           batch_size=3,
+                                                           batch_size=5,
                                                            ksize=3,
                                                            neighbours=1,
                                                            metric=args.metric,
@@ -118,8 +118,6 @@ def example_blosum_encoded_sequences(unique_characters=21, random_seqs=False):
     # TODO: Positional weights are returned also when rgs.metric == <pairwise>
     # TODO: Test runtime with and without deleting objects and gc.collect
     if args.metric in ["cosine", "all"]:
-        print(results.cosine_similarity_mean)
-
         plot_heatmap(results.cosine_similarity_mean, "HEATMAP Cosine similarity mean",
                      "{}/HEATMAP_cosine_similarity_mean".format(storage_folder))
         if args.calculate_kmers:
@@ -183,17 +181,17 @@ def parse_args(parser):
                              '<similarities> \n'
                              '<mutualinfo>')
 
-    parser.add_argument('-runtime', type=str, nargs='?', default="disk",
+    parser.add_argument('-runtime', type=str, nargs='?', default="ram",
                         help='How to compute/store the calculations'
                              '<ram>: The chunked results are computed and accumulated on RAM \n'
                              '<disk>: The results arrays are initialized on disk and filled up with the chunked computations made by the RAM')
-    parser.add_argument('-metric', type=str, nargs='?', default="all",
+    parser.add_argument('-metric', type=str, nargs='?', default="cosine",
                         help='Type of sequence similarities metric (cosine, pairwise, use when args.analysis == <similarities>'
                              '<cosine> \n'
                              '<pairwise>: Percent identity \n'
                              '<all>: calculates both cosine and percent identity metrics')
 
-    parser.add_argument('-calculate_kmers', action=argparse.BooleanOptionalAction, default=True,
+    parser.add_argument('-calculate_kmers', action=argparse.BooleanOptionalAction, default=False,
                         help='Add calculation of kmers similarity, use when args.analysis == <similarities>. Example: If args.metric is <cosine> then it will calculate the kmers cosine similarity'
                              '<True>\n'
                              '<False>')

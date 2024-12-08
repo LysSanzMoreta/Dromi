@@ -72,6 +72,7 @@ def cosine_similarity(a, b, correlation_matrix=False, parallel=False):  # TODO: 
                 cosine_sim = cosine_sim[:-remove]
             else:
                 cosine_sim = cosine_sim[:, :-remove]
+
         if parallel:
             return cosine_sim[None, :]
         else:
@@ -88,10 +89,22 @@ def cosine_similarity(a, b, correlation_matrix=False, parallel=False):  # TODO: 
 
         if diff_sizes:  # remove the dummy creation that was made avoid shape conflicts
             remove = np.abs(n_a - n_b)
+
             if n_a < n_b:
+                # print("na < nb")
                 cosine_sim = cosine_sim[:-remove]
             else:
+                # print("na > nb")
+                # print("Before")
+                # print(cosine_sim.shape)
+                # print(cosine_sim[-1])
                 cosine_sim = cosine_sim[:, :-remove]
+
+            # if n_a > n_b:
+            #     print("After")
+            #     print(cosine_sim.shape)
+            #     print(cosine_sim[-1])
+            #     exit()
 
         return cosine_sim
 
@@ -514,6 +527,7 @@ def process_value_cosine(iterables_args, fixed_args):
     print("###### j {} ##########################".format(j))
     r_j = rest_splits[j]  # next array
     r_j_mask = mask_splits[j + shift]
+
     cosine_sim_j = cosine_similarity(curr_array, r_j, correlation_matrix=False)
     # if np.ndim(curr_array) == 2:  # Integer encoded #TODO: Delete and force to have dimensions [N,L,1]
     #     pairwise_sim_j = (curr_array[None, :] == r_j[:, None]).astype(int)
@@ -933,13 +947,14 @@ def process_value_cosine_ondisk(iterables_args,
                       start_store_point:end_store_point], kmers_cosine_similarity_ij.astype(dtype).T,
                       where=mask.T)  # transpose
             results_files["kmers_cosine_similarity_mean"].flush()
+            del kmers_cosine_similarity_ij
 
         results_files["cosine_similarity_mean"].flush()
         results_files["cosine_sim_pairwise_matrix"].flush()
 
     # lock.release()
 
-    del cosine_similarity_mean_ij, cosine_sim_pairwise_matrix_ij, kmers_cosine_similarity_ij, mask
+    del cosine_similarity_mean_ij, cosine_sim_pairwise_matrix_ij, mask
     gc.collect()
 
 
@@ -1303,6 +1318,7 @@ def fill_array(array_fixed, ij, start_i, end_i, start_j, end_j):
     :param int end_j: Indicates the column-wise end position where this batch is allocated
     """
     array_fixed[start_i:end_i, start_j:end_j] = ij
+    array_fixed[start_j:end_j, start_i:end_i] = ij  # transpose
     return array_fixed
 
 
@@ -1372,6 +1388,7 @@ def calculate_similarities(array: Union[np.ndarray],
         split_size = [int(array.shape[0] / batch_size) if not batch_size > array.shape[0] else 1][0]
         splits = np.array_split(array, split_size)
         mask_splits = np.array_split(array_mask, split_size)
+
         print("Generated {} splits from {} data points".format(len(splits), n_data))
 
         if ksize >= max_len:
@@ -1397,10 +1414,24 @@ def calculate_similarities(array: Union[np.ndarray],
         start = time.time()
         args_fixed = splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, calculate_kmers
         args_iterables = DromiUtils.retrieve_iterable_indexes(splits)
+
+        # Highlight: For debugging, do not delete
+        # cosine_similarity_mean_ij = []
+        # starts_i = []
+        # ends_i = []
+        # starts_j = []
+        # ends_j = []
         # for iter_args in zip(*args_iterables.values()):  # This works on iteration not in
-        #     process_value(iter_args, args_fixed)
+        #     results = process_value_cosine(iter_args, args_fixed)
+        #     cosine_similarity_mean_ij.append(results[2])
+        #     starts_i.append(results[6])
+        #     ends_i.append(results[7])
+        #     starts_j.append(results[8])
+        #     ends_j.append(results[9])
         #
-        # exit()
+        # for start_i, end_i, start_j, end_j, ij in zip(starts_i, ends_i, starts_j, ends_j, cosine_similarity_mean_ij):
+        #     fill_array(cosine_similarity_mean, ij, start_i, end_i, start_j, end_j)
+
         with multiprocessing.Pool(multiprocessing.cpu_count() - 1) as pool:
             results = SimilarityParallel(metric, calculate_kmers, args_iterables, args_fixed).outer_loop(pool)
             zipped_results = list(zip(*results))
@@ -1435,14 +1466,12 @@ def calculate_similarities(array: Union[np.ndarray],
         # Highlight: Mirror values across the diagonal.
         # pid_pairwise_matrix = np.maximum(pid_pairwise_matrix, pid_pairwise_matrix.transpose(1,0,2,3))
         if metric in ["cosine", "all"]:
-            cosine_sim_pairwise_matrix = np.maximum(cosine_sim_pairwise_matrix,
-                                                    cosine_sim_pairwise_matrix.transpose(1, 0, 2, 3))
-            cosine_similarity_mean = np.maximum(cosine_similarity_mean, cosine_similarity_mean.transpose())
+            # cosine_sim_pairwise_matrix = np.maximum(cosine_sim_pairwise_matrix,cosine_sim_pairwise_matrix.transpose(1, 0, 2, 3))
+            # cosine_similarity_mean = np.maximum(cosine_similarity_mean, cosine_similarity_mean.transpose())
             np.save("{}/cosine_similarity_mean.npy".format(storage_folder), cosine_similarity_mean)
             cosine_similarity_mean = np.ma.getdata(cosine_similarity_mean)
             if calculate_kmers:
-                kmers_cosine_similarity_mean = np.maximum(kmers_cosine_similarity_mean,
-                                                          kmers_cosine_similarity_mean.transpose())
+                # kmers_cosine_similarity_mean = np.maximum(kmers_cosine_similarity_mean,kmers_cosine_similarity_mean.transpose())
                 # kmers_cosine_similarity_matrix_diag = np.maximum(kmers_cosine_similarity_matrix_diag, kmers_cosine_similarity_matrix_diag.transpose(1,0,2,3,4))
                 np.save("{}/kmers_cosine_similarity_{}ksize.npy".format(storage_folder, ksize), kmers_cosine_similarity)
                 kmers_cosine_similarity_mean = np.ma.getdata(kmers_cosine_similarity_mean)
@@ -1452,11 +1481,11 @@ def calculate_similarities(array: Union[np.ndarray],
                 percent_identity_mean = None
                 kmers_pid_similarity = None
         if metric in ["pairwise", "all"]:
-            percent_identity_mean = np.maximum(percent_identity_mean, percent_identity_mean.transpose())
+            # percent_identity_mean = np.maximum(percent_identity_mean, percent_identity_mean.transpose())
             np.save("{}/percent_identity_mean.npy".format(storage_folder), percent_identity_mean)
             percent_identity_mean = np.ma.getdata(percent_identity_mean)
             if calculate_kmers:
-                kmers_pid_similarity = np.maximum(kmers_pid_similarity, kmers_pid_similarity.transpose())
+                # kmers_pid_similarity = np.maximum(kmers_pid_similarity, kmers_pid_similarity.transpose())
                 np.save("{}/kmers_pid_similarity_{}ksize.npy".format(storage_folder, ksize), kmers_pid_similarity)
                 kmers_pid_similarity = np.ma.getdata(kmers_pid_similarity)
             if metric == "pairwise":
@@ -1608,8 +1637,9 @@ def calculate_similarities_ondisk(array: Union[np.ndarray],
         args_fixed = splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, dtype, calculate_kmers
         args_iterables = DromiUtils.retrieve_iterable_indexes(splits)  # TODO: Calculate in each batch?
 
-        # for iter_args in zip(*args_iterables.values()): #just put results_files in the args_fixed and comment out the lock to be able to actuvate this sequential version
-        #     process_value_ondisk(iter_args, args_fixed)
+        # for iter_args in zip(
+        #         *args_iterables.values()):  # just put results_files in the args_fixed and comment out the lock to be able to actuvate this sequential version
+        #     process_value_cosine_ondisk(iter_args, args_fixed)
         # exit()
 
         lock = multiprocessing.Lock()  # memory lock to prevent multiple process writting into the same file at the same time
