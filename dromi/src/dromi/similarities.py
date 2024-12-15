@@ -12,7 +12,6 @@ import time
 import datetime
 import warnings
 from typing import Union
-from typing_extensions import Literal
 import numpy as np
 import multiprocessing
 from collections import namedtuple, defaultdict
@@ -206,7 +205,7 @@ def calculate_masked_mean_kmers(iterables_args, fixed_args):  # TODO: Needs to b
     """
     nkmers, kmers_mask = fixed_args  # kmers_mask = [N,nkmers,ksize]
     hotspots_splits, kmer_idx, diag_idx_1 = iterables_args  # hotspots = [batch_size,N,nkmers,nkmers,ksize)
-    print("--------------{}-------------".format(kmer_idx))
+    # print("--------------{}-------------".format(kmer_idx))
     diag_idx_0 = np.arange(0, hotspots_splits.shape[0])  # in case there are uneven splits
     hotspots_splits[diag_idx_0, diag_idx_1] = 0  # ignore self cosine similarity
     # hotspots = hotspots[seq_idx]
@@ -248,7 +247,7 @@ def calculate_masked_mean(iterables_args, fixed_args):
     hotspots, max_len, positional_mask, neighbours, dtype = fixed_args  # kmers_mask = [N,nkmers,ksize]
     positional_idx, diag_idx_1, start_idx, end_idx = iterables_args  # hotspots = [batch_size,N,max_len,max_len)
     hotspots_split = hotspots[start_idx:end_idx]
-    print("-----------positional idx: {}-------------".format(positional_idx))
+    # print("-----------positional idx: {}-------------".format(positional_idx))
     diag_idx_0 = np.arange(0, hotspots_split.shape[0])  # in case there are uneven splits
     hotspots_split[diag_idx_0, diag_idx_1] = 0  # ignore self cosine similarity to avoid inflating the scores
     positional_weights = np.zeros((hotspots_split.shape[0], max_len))  # [batch_size,max_len]
@@ -305,7 +304,7 @@ def calculate_masked_mean_ondisk(iterables_args, fixed_args):
     hotspots, max_len, positional_mask, neighbours, dtype = fixed_args  # kmers_mask = [N,nkmers,ksize]
     # hotspots, max_len,positional_mask,neighbours, dtype, results_files = fixed_args #kmers_mask = [N,nkmers,ksize] #for sequential debugging
     positional_idx, diag_idx_1, start_idx, end_idx = iterables_args  # hotspots = [batch_size,N,max_len,max_len)
-    print("-----------positional idx: {}-------------".format(positional_idx))
+    # print("-----------positional idx: {}-------------".format(positional_idx))
     hotspots_split = hotspots[start_idx:end_idx]
     diag_idx_0 = np.arange(0, hotspots_split.shape[0])  # we do it here in case there are uneven splits
     hotspots_split[diag_idx_0, diag_idx_1] = 0  # ignore self cosine similarity
@@ -517,14 +516,14 @@ def process_value_cosine(iterables_args, fixed_args):
 
     i, j, shift, start_store_point, end_store_point, store_point_helper, start_store_point_i, end_store_point_i = iterables_args
     splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, calculate_kmers = fixed_args
-    print(" ------------  i: {}----------------------------".format(i))
+    # print(" ------------  i: {}----------------------------".format(i))
     curr_array = splits[i]
     curr_mask = mask_splits[i]
     n_data_curr = curr_array.shape[0]
     rest_splits = splits.copy()[shift:]
     # Highlight: Define intermediate storing arrays #TODO: They can be even smaller to have shape sum(rest_splits.shape)
     start_i = time.time()
-    print("###### j {} ##########################".format(j))
+    # print("###### j {} ##########################".format(j))
     r_j = rest_splits[j]  # next array
     r_j_mask = mask_splits[j + shift]
 
@@ -603,7 +602,7 @@ def process_value_cosine(iterables_args, fixed_args):
     del r_j, r_j_mask, r_j_mask_expanded, rest_splits, curr_array, curr_mask
     del matrix_mask_ij, pid_mask_ij, curr_mask_expanded
     end_i = time.time()
-    print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
+    # print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
     gc.collect()
     return cosine_sim_pairwise_matrix_ij, \
         None, \
@@ -619,14 +618,14 @@ def process_value_pid(iterables_args, fixed_args):
 
     i, j, shift, start_store_point, end_store_point, store_point_helper, start_store_point_i, end_store_point_i = iterables_args
     splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, calculate_kmers = fixed_args
-    print(" ------------  i: {}----------------------------".format(i))
+    # print(" ------------  i: {}----------------------------".format(i))
     curr_array = splits[i]
     curr_mask = mask_splits[i]
     n_data_curr = curr_array.shape[0]
     rest_splits = splits.copy()[shift:]
     # Highlight: Define intermediate storing arrays #TODO: They can be even smaller to have shape sum(rest_splits.shape)
     start_i = time.time()
-    print("###### j {} ##########################".format(j))
+    # print("###### j {} ##########################".format(j))
     r_j = rest_splits[j]  # next array
     r_j_mask = mask_splits[j + shift]
     # cosine_sim_j = cosine_similarity(curr_array, r_j, correlation_matrix=False)
@@ -704,7 +703,7 @@ def process_value_pid(iterables_args, fixed_args):
     del r_j, r_j_mask, r_j_mask_expanded, rest_splits, curr_array, curr_mask
     del matrix_mask_ij, pid_mask_ij, curr_mask_expanded
     end_i = time.time()
-    print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
+    # print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
     gc.collect()
     return None, \
         percent_identity_mean_ij, \
@@ -720,14 +719,14 @@ def process_value_all(iterables_args, fixed_args):
 
     i, j, shift, start_store_point, end_store_point, store_point_helper, start_store_point_i, end_store_point_i = iterables_args
     splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, calculate_kmers = fixed_args
-    print(" ------------  i: {}----------------------------".format(i))
+    # print(" ------------  i: {}----------------------------".format(i))
     curr_array = splits[i]
     curr_mask = mask_splits[i]
     n_data_curr = curr_array.shape[0]
     rest_splits = splits.copy()[shift:]
     # Highlight: Define intermediate storing arrays #TODO: They can be even smaller to have shape sum(rest_splits.shape)
     start_i = time.time()
-    print("###### j {} ##########################".format(j))
+    # print("###### j {} ##########################".format(j))
     r_j = rest_splits[j]  # next array
     r_j_mask = mask_splits[j + shift]
     cosine_sim_j = cosine_similarity(curr_array, r_j, correlation_matrix=False)
@@ -806,7 +805,7 @@ def process_value_all(iterables_args, fixed_args):
     del kmers_matrix_cosine_diag_mean_ij, kmers_matrix_cosine_ij
     gc.collect()
     end_i = time.time()
-    print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
+    # print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
     return cosine_sim_pairwise_matrix_ij, \
         percent_identity_mean_ij, \
         cosine_similarity_mean_ij, \
@@ -822,7 +821,7 @@ def process_value_cosine_ondisk(iterables_args,
 
     i, j, shift, start_store_point, end_store_point, store_point_helper, start_store_point_i, end_store_point_i = iterables_args
     splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, dtype, calculate_kmers = fixed_args
-    print(" ------------  i: {}----------------------------".format(i))
+    # print(" ------------  i: {}----------------------------".format(i))
     curr_array = splits[i]
     curr_mask = mask_splits[i]
     # n_data_curr = curr_array.shape[0]
@@ -830,7 +829,7 @@ def process_value_cosine_ondisk(iterables_args,
     # rest_splits = splits[shift:] #need to copy because otherwise it slices it out inplace and disapears
     # Highlight: Define intermediate storing arrays #TODO: They can be even smaller to have shape sum(rest_splits.shape)
     start_i = time.time()
-    print("###### j {} ##########################".format(j))
+    # print("###### j {} ##########################".format(j))
     # r_j = rest_splits[j] #next array
     r_j = splits.copy()[shift:][j]  # next array
     r_j_mask = mask_splits[j + shift]
@@ -907,7 +906,7 @@ def process_value_cosine_ondisk(iterables_args,
             cosine_similarity_mean_ij.ravel()[
             :cosine_similarity_mean_ij.shape[1] ** 2:cosine_similarity_mean_ij.shape[1] + 1])
     end_i = time.time()
-    print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
+    # print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
     del curr_mask, r_j, r_j_mask, curr_mask_expanded, r_j_mask_expanded, matrix_mask_ij
     del cosine_sim_j
     gc.collect()
@@ -964,7 +963,7 @@ def process_value_pid_ondisk(iterables_args,
 
     i, j, shift, start_store_point, end_store_point, store_point_helper, start_store_point_i, end_store_point_i = iterables_args
     splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, dtype, calculate_kmers = fixed_args
-    print(" ------------  i: {}----------------------------".format(i))
+    # print(" ------------  i: {}----------------------------".format(i))
     curr_array = splits[i]
     curr_mask = mask_splits[i]
     # n_data_curr = curr_array.shape[0]
@@ -973,7 +972,7 @@ def process_value_pid_ondisk(iterables_args,
 
     # Highlight: Define intermediate storing arrays #TODO: They can be even smaller to have shape sum(rest_splits.shape)
     start_i = time.time()
-    print("###### j {} ##########################".format(j))
+    # print("###### j {} ##########################".format(j))
     # r_j = rest_splits[j] #next array
     r_j = splits.copy()[shift:][j]  # next array
     r_j_mask = mask_splits[j + shift]
@@ -1047,7 +1046,7 @@ def process_value_pid_ondisk(iterables_args,
     #     cosine_similarity_mean_ij.ravel()[
     #     :cosine_similarity_mean_ij.shape[1] ** 2:cosine_similarity_mean_ij.shape[1] + 1])
     end_i = time.time()
-    print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
+    # print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
     del curr_mask, r_j, r_j_mask, curr_mask_expanded, r_j_mask_expanded, pid_mask_ij, matrix_mask_ij,
 
     gc.collect()
@@ -1060,19 +1059,6 @@ def process_value_pid_ondisk(iterables_args,
         np.copyto(results_files["percent_identity_mean"][start_store_point_i:end_store_point_i,
                   start_store_point:end_store_point], percent_identity_mean_ij.astype(dtype).T,
                   where=mask.T)  # transpose
-
-        # np.copyto(results_files["cosine_similarity_mean"][start_store_point:end_store_point,
-        #           start_store_point_i:end_store_point_i], cosine_similarity_mean_ij.astype(dtype), where=mask)
-        # np.copyto(results_files["cosine_similarity_mean"][start_store_point_i:end_store_point_i,
-        #           start_store_point:end_store_point], cosine_similarity_mean_ij.astype(dtype).T,
-        #           where=mask.T)  # transpose
-
-        # mask = np.ones_like(cosine_sim_pairwise_matrix_ij).astype(bool)
-        # np.copyto(results_files["cosine_sim_pairwise_matrix"][start_store_point:end_store_point,
-        #           start_store_point_i:end_store_point_i], cosine_sim_pairwise_matrix_ij.astype(dtype), where=mask)
-        # np.copyto(results_files["cosine_sim_pairwise_matrix"][start_store_point_i:end_store_point_i,
-        #           start_store_point:end_store_point], cosine_sim_pairwise_matrix_ij.astype(dtype).transpose(1, 0, 2, 3),
-        #           where=mask.transpose(1, 0, 2, 3))  # transpose
         if calculate_kmers:
             mask = np.ones_like(kmers_pid_similarity_ij).astype(bool)
             np.copyto(results_files["kmers_pid_similarity"][start_store_point:end_store_point,
@@ -1081,17 +1067,8 @@ def process_value_pid_ondisk(iterables_args,
                       start_store_point:end_store_point], kmers_pid_similarity_ij.astype(dtype).T,
                       where=mask.T)  # transpose
             del mask
-
-        # mask = np.ones_like(kmers_cosine_similarity_ij).astype(bool)
-        # np.copyto(results_files["kmers_cosine_similarity_mean"][start_store_point:end_store_point,
-        #           start_store_point_i:end_store_point_i], kmers_cosine_similarity_ij.astype(dtype), where=mask)
-        # np.copyto(results_files["kmers_cosine_similarity_mean"][start_store_point_i:end_store_point_i,
-        #           start_store_point:end_store_point], kmers_cosine_similarity_ij.astype(dtype).T,
-        #           where=mask.T)  # transpose
-
         results_files["percent_identity_mean"].flush()
-        # results_files["cosine_similarity_mean"].flush()
-        # results_files["cosine_sim_pairwise_matrix"].flush()
+
         if calculate_kmers:
             results_files["kmers_pid_similarity"].flush()
             del kmers_pid_similarity_ij
@@ -1107,7 +1084,7 @@ def process_value_all_ondisk(iterables_args,
 
     i, j, shift, start_store_point, end_store_point, store_point_helper, start_store_point_i, end_store_point_i = iterables_args
     splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, dtype, calculate_kmers = fixed_args
-    print(" ------------  i: {}----------------------------".format(i))
+    # print(" ------------  i: {}----------------------------".format(i))
     curr_array = splits[i]
     curr_mask = mask_splits[i]
     # n_data_curr = curr_array.shape[0]
@@ -1116,7 +1093,7 @@ def process_value_all_ondisk(iterables_args,
 
     # Highlight: Define intermediate storing arrays #TODO: They can be even smaller to have shape sum(rest_splits.shape)
     start_i = time.time()
-    print("###### j {} ##########################".format(j))
+    # print("###### j {} ##########################".format(j))
     # r_j = rest_splits[j] #next array
     r_j = splits.copy()[shift:][j]  # next array
     r_j_mask = mask_splits[j + shift]
@@ -1189,7 +1166,7 @@ def process_value_all_ondisk(iterables_args,
             cosine_similarity_mean_ij.ravel()[
             :cosine_similarity_mean_ij.shape[1] ** 2:cosine_similarity_mean_ij.shape[1] + 1])
     end_i = time.time()
-    print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
+    # print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
     del curr_mask, r_j, r_j_mask, curr_mask_expanded, r_j_mask_expanded, kmers_mask_curr_i, kmers_mask_r_j, kmers_mask_ij
     del pid_mask_ij, kmers_matrix_pid_ij, kmers_matrix_cosine_ij, matrix_mask_ij
     del kmers_matrix_pid_diag_ij, kmers_matrix_pid_diag_mean_ij, kmers_matrix_cosine_diag_mean_ij, kmers_matrix_cosine_diag_ij
@@ -1340,7 +1317,7 @@ def fill_array_map(array_fixed, ij_arrays, starts, ends, starts_j, ends_j):
 def calculate_similarities(array: Union[np.ndarray],
                            max_len: int,
                            array_mask: Union[np.ndarray, None],
-                           storage_folder: str,
+                           storage_folder: str | None,
                            batch_size: int = 100,
                            ksize: int = 3,
                            neighbours: int = 1,
@@ -1409,12 +1386,11 @@ def calculate_similarities(array: Union[np.ndarray],
         cosine_sim_pairwise_matrix = np.zeros((n_data, n_data, max_len, max_len), dtype=dtype)
         kmers_pid_similarity = np.zeros((n_data, n_data), dtype=dtype)
         kmers_cosine_similarity = np.zeros((n_data, n_data), dtype=dtype)
-        # kmers_cosine_similarity_matrix_diag = np.zeros((n_data, n_data,nkmers,nkmers,ksize),dtype=np.uint16) #TODO: Reduce memory consumption
+        # kmers_cosine_similarity_matrix_diag = np.zeros((n_data, n_data,nkmers,nkmers,ksize),dtype=np.uint16)
         # Highlight: Initialize the list of indexes for parallel computation
         start = time.time()
         args_fixed = splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, calculate_kmers
         args_iterables = DromiUtils.retrieve_iterable_indexes(splits)
-
         # Highlight: For debugging, do not delete
         # cosine_similarity_mean_ij = []
         # starts_i = []
@@ -1462,18 +1438,22 @@ def calculate_similarities(array: Union[np.ndarray],
                                                           ends_i, starts_j, ends_j)
 
         end = time.time()
-        print("Overall calculation time {}".format(str(datetime.timedelta(seconds=end - start))))
+        final_time = datetime.timedelta(seconds=end - start)
+        print("Overall calculation time {}".format(str(final_time)))
         # Highlight: Mirror values across the diagonal.
         # pid_pairwise_matrix = np.maximum(pid_pairwise_matrix, pid_pairwise_matrix.transpose(1,0,2,3))
         if metric in ["cosine", "all"]:
             # cosine_sim_pairwise_matrix = np.maximum(cosine_sim_pairwise_matrix,cosine_sim_pairwise_matrix.transpose(1, 0, 2, 3))
             # cosine_similarity_mean = np.maximum(cosine_similarity_mean, cosine_similarity_mean.transpose())
-            np.save("{}/cosine_similarity_mean.npy".format(storage_folder), cosine_similarity_mean)
+            if storage_folder is not None:
+                np.save("{}/cosine_similarity_mean.npy".format(storage_folder), cosine_similarity_mean)
             cosine_similarity_mean = np.ma.getdata(cosine_similarity_mean)
             if calculate_kmers:
                 # kmers_cosine_similarity_mean = np.maximum(kmers_cosine_similarity_mean,kmers_cosine_similarity_mean.transpose())
                 # kmers_cosine_similarity_matrix_diag = np.maximum(kmers_cosine_similarity_matrix_diag, kmers_cosine_similarity_matrix_diag.transpose(1,0,2,3,4))
-                np.save("{}/kmers_cosine_similarity_{}ksize.npy".format(storage_folder, ksize), kmers_cosine_similarity)
+                if storage_folder is not None:
+                    np.save("{}/kmers_cosine_similarity_{}ksize.npy".format(storage_folder, ksize),
+                            kmers_cosine_similarity)
                 kmers_cosine_similarity_mean = np.ma.getdata(kmers_cosine_similarity_mean)
             else:
                 kmers_cosine_similarity_mean = None
@@ -1482,11 +1462,13 @@ def calculate_similarities(array: Union[np.ndarray],
                 kmers_pid_similarity = None
         if metric in ["pairwise", "all"]:
             # percent_identity_mean = np.maximum(percent_identity_mean, percent_identity_mean.transpose())
-            np.save("{}/percent_identity_mean.npy".format(storage_folder), percent_identity_mean)
+            if storage_folder is not None:
+                np.save("{}/percent_identity_mean.npy".format(storage_folder), percent_identity_mean)
             percent_identity_mean = np.ma.getdata(percent_identity_mean)
             if calculate_kmers:
                 # kmers_pid_similarity = np.maximum(kmers_pid_similarity, kmers_pid_similarity.transpose())
-                np.save("{}/kmers_pid_similarity_{}ksize.npy".format(storage_folder, ksize), kmers_pid_similarity)
+                if storage_folder is not None:
+                    np.save("{}/kmers_pid_similarity_{}ksize.npy".format(storage_folder, ksize), kmers_pid_similarity)
                 kmers_pid_similarity = np.ma.getdata(kmers_pid_similarity)
             if metric == "pairwise":
                 cosine_similarity_mean = None
@@ -1495,7 +1477,8 @@ def calculate_similarities(array: Union[np.ndarray],
         if calculate_positional_weights:
             positional_weights = importance_weight(cosine_sim_pairwise_matrix, max_len, array_mask, batch_size,
                                                    neighbours, dtype)
-            np.save("{}/positional_weights.npy".format(storage_folder), positional_weights)
+            if storage_folder is not None:
+                np.save("{}/positional_weights.npy".format(storage_folder), positional_weights)
             positional_weights = np.ma.getdata(positional_weights)
             # if calculate_kmers:
             #       positional_weights_kmers = importance_weight_kmers(kmers_cosine_similarity_matrix_diag,nkmers,ksize,max_len,array_mask,overlapping_kmers,batch_size) #TODO: Remove or?
@@ -1507,13 +1490,13 @@ def calculate_similarities(array: Union[np.ndarray],
                                                kmers_pid_similarity=kmers_pid_similarity,
                                                kmers_cosine_similarity_mean=kmers_cosine_similarity_mean)
 
-        return similarity_results
+        return similarity_results, final_time
 
 
 def calculate_similarities_ondisk(array: Union[np.ndarray],
                                   max_len: int,
                                   array_mask: Union[np.ndarray, None],
-                                  storage_folder: str,
+                                  storage_folder: str | None,
                                   batch_size: int = 50,
                                   ksize: int = 3,
                                   neighbours: int = 1,
@@ -1667,20 +1650,11 @@ def calculate_similarities_ondisk(array: Union[np.ndarray],
             positional_weights = importance_weight(cosine_sim_pairwise_matrix, max_len, array_mask, batch_size,
                                                    neighbours, dtype=dtype, runtime_option="ondisk",
                                                    initializer=init_pool_processes, init_args=(lock, results_files))
-            np.save("{}/positional_weights.npy".format(storage_folder), positional_weights)
+            if storage_folder is not None:
+                np.save("{}/positional_weights.npy".format(storage_folder), positional_weights)
             positional_weights = np.ma.getdata(positional_weights)
         else:
             positional_weights = None
-        # percent_identity_mean = np.maximum(percent_identity_mean, percent_identity_mean.transpose())
-        # cosine_similarity_mean = np.maximum(cosine_similarity_mean, cosine_similarity_mean.transpose())
-        # kmers_pid_similarity = np.maximum(kmers_pid_similarity, kmers_pid_similarity.transpose())
-        # kmers_cosine_similarity_mean = np.maximum(kmers_cosine_similarity_mean, kmers_cosine_similarity_mean.transpose())
-
-        # np.save("{}/percent_identity_mean.npy".format(storage_folder),
-        #         percent_identity_mean)  # TODO:delete since it is already saved on the .dat files?
-        # np.save("{}/cosine_similarity_mean.npy".format(storage_folder), cosine_similarity_mean)
-        # np.save("{}/kmers_pid_similarity_{}ksize.npy".format(storage_folder, ksize), kmers_pid_similarity)
-        # np.save("{}/kmers_cosine_similarity_{}ksize.npy".format(storage_folder, ksize), kmers_cosine_similarity_mean)
 
         if metric in ["all", "pairwise"]:
             percent_identity_mean = np.ma.getdata(percent_identity_mean)

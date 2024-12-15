@@ -287,7 +287,11 @@ class SequenceRandomGeneration(object):
                 <ends>: padds the sequences at the end -> ATRVS######
                 <random>: Inserts random paddings given  a sequence maximum length -> A#T#RV##S###
                 <borders>: Inserts paddings left and right of the sequence, leaving the sequence centered centered -> ###ATRVS###
-                <replicated_borders>: Replicates the sequences left and right borders to fit a maximum length, some parts of the process are random -> ATRATRVSVS """
+                <replicated_borders>: Replicates the sequences left and right borders to fit a maximum length, some parts of the process are random -> ATRATRVSVS
+
+    returns:
+          seq_padded
+    """
 
     def __init__(self, sequences, seq_max_len, padding_method):
         self.sequences = sequences
