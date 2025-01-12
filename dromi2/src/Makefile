@@ -1,0 +1,47 @@
+TARGET_OMP	= dromi_omp
+
+
+OBJS_OMP = dromi_omp.o utils_omp.o
+
+OPT	= -g -O3
+ISA	=
+PARA	= -fopenmp
+
+XOPTS = -Xptxas=-v -arch=sm_90 -lineinfo
+
+CC	= gcc
+
+CCC	= g++
+CXX	= nvcc
+CXXFLAGS= --compiler-options "$(OPT) $(PARA)" $(XOPTS)
+
+CFLAGS	= $(OPT) $(ISA) $(PARA) #$(XOPTS)
+
+F90C  	= gfortran
+
+CUDA_PATH ?= /appl/cuda/12.2.2
+INCLUDES = -I$(CUDA_PATH)/include -I$(CUDA_PATH)/samples/Common
+
+
+all: $(TARGET_OMP)
+
+$(TARGET_OMP): $(OBJS_OMP)
+	$(CC) $(CFLAGS) -o $@ $(OBJS_OMP) -lm
+
+.SUFFIXES: .cu .c
+.cu.o:
+	$(CXX) -o $*.o -c $*.cu $(CXXFLAGS) $(SOFLAGS) $(INCLUDES)
+
+.c.o:
+	$(CC) -o $*.o -c $*.c $(OPT) $(PARA) $(SOFLAGS) $(INCLUDES)
+
+clean:
+	@/bin/rm -f *.o core
+
+realclean: clean
+	@rm -f $(TARGET_OMP)
+
+
+# dependencies
+dromi_omp.o: dromi_omp.c utils_omp.h
+utils_omp.o: utils_omp.c utils_omp.h
