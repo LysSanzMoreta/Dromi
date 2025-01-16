@@ -25,8 +25,8 @@ int main() {
     int maxLength = 10;  // Desired length for each string
 
     // Read the file and store strings in the array
-    readFileAndStoreStrings("seqs.txt", &seqs, &numSeqs, maxLength);
-    padStringsToMaxLength(seqs, numSeqs, maxLength);
+    // readFileAndStoreStrings("seqs.txt", &seqs, &numSeqs, maxLength);
+    // padStringsToMaxLength(seqs, numSeqs, maxLength);
 
 
     // Retrieve values
@@ -41,6 +41,7 @@ int main() {
     // double sim = 0.0;
 
     int N = 2000;
+    // int N = 5;
 
     // Allocate the array
     double* arrayA = (double*)malloc(N * sizeof(double));
@@ -97,7 +98,7 @@ int main() {
 
     time = omp_get_wtime() - time;
     printf("%f\n", time);
-    // printf("m %f\n", matrix[1][1]);
+    // printf("m %f\n", matrix[1][2]);
 
 
 

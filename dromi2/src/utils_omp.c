@@ -54,10 +54,11 @@ void cosine_sim_3d(
     int length_features
     ){
 
+    // Only compute the upper triangle
     #pragma omp parallel for collapse(2)
     for (int i = 0; i < length_matrix; ++i){
-        for (int j = 0; j < length_matrix; ++j){
-
+        for (int j = i+1; j < length_matrix; ++j){
+            // printf("(%d, %d)", i, j);
             double dotProduct = 0.0, normA = 0.0, normB = 0.0;
             for (int i = 0; i < length_features; i++) {
                 dotProduct += arrayA[i] * arrayB[i];
