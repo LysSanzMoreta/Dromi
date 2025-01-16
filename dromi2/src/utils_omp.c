@@ -27,10 +27,10 @@ void printArray(const double* array, int N) {
 }
 
 
-void cosine_sim(const double* arrayA, const double* arrayB, int length, double* similarity){
+double cosine_sim(const double* arrayA, const double* arrayB, int length){
     double dotProduct = 0.0, normA = 0.0, normB = 0.0;
 
-    #pragma omp parallel for reduction(+:dotProduct, normA, normB)
+    // #pragma omp parallel for reduction(+:dotProduct, normA, normB)
     for (int i = 0; i < length; i++) {
         dotProduct += arrayA[i] * arrayB[i];
         normA += arrayA[i] * arrayA[i];
@@ -42,7 +42,33 @@ void cosine_sim(const double* arrayA, const double* arrayB, int length, double* 
     normB = sqrtf(normB);
 
     // Compute cosine similarity
-    *similarity = dotProduct / (normA * normB);
+    // *similarity = dotProduct / (normA * normB);
+    return dotProduct / (normA * normB);
+}
+
+void cosine_sim_3d(
+    const double* arrayA,
+    const double* arrayB,
+    double** matrix,
+    int length_matrix,
+    int length_features
+    ){
+
+    #pragma omp parallel for collapse(2)
+    for (int i = 0; i < length_matrix; ++i){
+        for (int j = 0; j < length_matrix; ++j){
+
+            double dotProduct = 0.0, normA = 0.0, normB = 0.0;
+            for (int i = 0; i < length_features; i++) {
+                dotProduct += arrayA[i] * arrayB[i];
+                normA += arrayA[i] * arrayA[i];
+                normB += arrayB[i] * arrayB[i];
+            }
+            // Compute the norms
+            normA = sqrtf(normA);
+            normB = sqrtf(normB);
+            matrix[i][j] = dotProduct / (normA * normB);
+        }}
 }
 
 

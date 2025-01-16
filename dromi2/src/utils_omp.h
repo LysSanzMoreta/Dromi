@@ -18,7 +18,15 @@ typedef struct {
 // Functions
 void norm2(const double* array, int length, double* val);
 void printArray(const double* array, int N);
-void cosine_sim(const double* arrayA, const double* arrayB, int length, double* similarity);
+// void cosine_sim(const double* arrayA, const double* arrayB, int length, double* similarity);
+double cosine_sim(const double* arrayA, const double* arrayB, int length);
+void cosine_sim_3d(
+    const double* arrayA,
+    const double* arrayB,
+    double** matrix,
+    int length_matrix,
+    int length_features
+    );
 void readFileAndStoreStrings(const char *filename, char ***strings, int *numStrings, int maxLength);
 void padStringsToMaxLength(char **strings, int numStrings, int maxLength);
 void freeStrings(char **strings, int numStrings);

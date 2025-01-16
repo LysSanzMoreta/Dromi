@@ -35,9 +35,83 @@ int main() {
     // printf("cherry: %d\n", getHash(&table, "#"));  // Output: 30
     // printf("orange: %d\n", getHash(&table, "W"));  // Output: -1 (not found)
 
+
+
+    // run cosine_sim ###################################
+    // double sim = 0.0;
+
+    int N = 2000;
+
+    // Allocate the array
+    double* arrayA = (double*)malloc(N * sizeof(double));
+    double* arrayB = (double*)malloc(N * sizeof(double));
+
+    // Init a cosine result matrix
+    // TODO: only init the upper triangle
+    double **matrix = (double **)malloc(N * sizeof(double *));
+    for (int i = 0; i < N; i++)
+        {
+            matrix[i] = (double *)malloc(N * sizeof(double));
+        }
+
+
+    // Init test arrays to compute the cos sim
+    // This is usually given with the
+    #pragma omp parallel for
+    for (int i = 0; i < N; ++i){
+        arrayA[i] = i;
+        arrayB[i] = i;
+    }
+    // arrayB[N-1] = 0.0;
+
+
+    // init matrix data
+    #pragma omp parallel for
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            matrix[i][j] = 0.0;
+        }
+    }
+
+    // printf("m %f\n", matrix[1][1]);
+
+    double sim = cosine_sim(arrayA, arrayB, N);
+    // printf("Sim: %f\n", sim);
+
+    double val = 0.0;
+
+    double time = omp_get_wtime();
+
+    // #pragma omp parallel for collapse(2)
+    // for (int i = 0; i < N; ++i){
+    //     for (int j = 0; j < N; ++j){
+    //         val = cosine_sim(arrayA, arrayB, N);
+    //         matrix[i][j] = val;
+    //         // printf("(%d, %d) sim: %f\n", i, j, val);
+    //     }
+    // }
+
+    cosine_sim_3d(arrayA, arrayB, matrix, N, N);
+
+    time = omp_get_wtime() - time;
+    printf("%f\n", time);
+    // printf("m %f\n", matrix[1][1]);
+
+
+
+
     // Free memory
     freeHashTable(&table);
     freeStrings(seqs, numSeqs);
+
+    free(arrayA);
+    free(arrayB);
+
+    for (int i = 0; i < N; ++i){
+        free(matrix[i]);
+    }
 
     return 0;
 
