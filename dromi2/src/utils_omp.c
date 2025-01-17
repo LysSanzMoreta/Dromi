@@ -86,7 +86,7 @@ void cosine_sim_3d(
             {
                 for (int l = k+1; l < length_arrays; ++l)
                 {
-                    sum += cosine_sim(tensorA[i][k], tensorB[j][l], length_arrays);
+                    sum += cosine_sim(tensorA[i][k], tensorB[j][l], length_features);
                 }
             }
             result_matrix[i][j] = sum/num_elements;
