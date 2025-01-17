@@ -9,8 +9,8 @@
 
 #define TABLE_SIZE 64
 
-void norm2(const double* array, int length, double* val){
-    double sumOfSquares = 0.0;
+void norm2(const float* array, int length, float* val){
+    float sumOfSquares = 0.0;
     #pragma omp parallel for reduction(+:sumOfSquares)
     for (int i = 0; i < length; ++i){
         sumOfSquares += array[i]*array[i];
@@ -19,7 +19,7 @@ void norm2(const double* array, int length, double* val){
 }
 
 
-void printArray(const double* array, int N) {
+void printArray(const float* array, int N) {
     for (int i = 0; i < N; ++i) {
         printf("%f ", array[i]);
     }
@@ -27,8 +27,8 @@ void printArray(const double* array, int N) {
 }
 
 
-double cosine_sim(const double* arrayA, const double* arrayB, int length){
-    double dotProduct = 0.0, normA = 0.0, normB = 0.0;
+float cosine_sim(float* arrayA, float* arrayB, int length){
+    float dotProduct = 0.0, normA = 0.0, normB = 0.0;
 
     // #pragma omp parallel for reduction(+:dotProduct, normA, normB)
     for (int i = 0; i < length; i++) {
@@ -36,40 +36,62 @@ double cosine_sim(const double* arrayA, const double* arrayB, int length){
         normA += arrayA[i] * arrayA[i];
         normB += arrayB[i] * arrayB[i];
     }
-
     // Compute the norms
     normA = sqrtf(normA);
     normB = sqrtf(normB);
-
-    // Compute cosine similarity
-    // *similarity = dotProduct / (normA * normB);
     return dotProduct / (normA * normB);
 }
 
+void cosine_sim_2d(
+    float** matrixA,
+    float** matrixB,
+    float** result_matrix,
+    int num_arrays,
+    int length_arrays
+    ){
+
+    // Only compute the upper triangle
+    #pragma omp parallel for collapse(2)
+    for (int i = 0; i < num_arrays; ++i){
+        for (int j = i+1; j < num_arrays; ++j){
+            result_matrix[i][j] = cosine_sim(matrixA[i], matrixB[j], length_arrays);
+        }}
+}
+
+
 void cosine_sim_3d(
-    const double* arrayA,
-    const double* arrayB,
-    double** matrix,
-    int length_matrix,
+    float*** tensorA,
+    float*** tensorB,
+    float** result_matrix,
+    int num_arrays,
+    int length_arrays,
     int length_features
     ){
 
     // Only compute the upper triangle
     #pragma omp parallel for collapse(2)
-    for (int i = 0; i < length_matrix; ++i){
-        for (int j = i+1; j < length_matrix; ++j){
-            // printf("(%d, %d)", i, j);
-            double dotProduct = 0.0, normA = 0.0, normB = 0.0;
-            for (int i = 0; i < length_features; i++) {
-                dotProduct += arrayA[i] * arrayB[i];
-                normA += arrayA[i] * arrayA[i];
-                normB += arrayB[i] * arrayB[i];
+    for (int i = 0; i < num_arrays; ++i)
+    {
+        for (int j = i+1; j < num_arrays; ++j)
+        {
+            // Now, we are working with a matrix of
+            // dim: (length_arrays, length_arrays, length_features)
+            // in the simple case, we just take the mean of the
+            // cos_sims
+            // to normalise we take the upper triangle minus the diag
+            int num_elements = length_arrays*(length_arrays+1)/2-length_arrays;
+            float sum = 0.0;
+            #pragma omp parallel for collapse(2)
+            for (int k = 0; k < length_arrays; ++k)
+            {
+                for (int l = k+1; l < length_arrays; ++l)
+                {
+                    sum += cosine_sim(tensorA[i][k], tensorB[j][l], length_arrays);
+                }
             }
-            // Compute the norms
-            normA = sqrtf(normA);
-            normB = sqrtf(normB);
-            matrix[i][j] = dotProduct / (normA * normB);
-        }}
+            result_matrix[i][j] = sum/num_elements;
+        }
+    }
 }
 
 

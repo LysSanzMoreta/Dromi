@@ -16,15 +16,23 @@ typedef struct {
 } HashTable;
 
 // Functions
-void norm2(const double* array, int length, double* val);
-void printArray(const double* array, int N);
-// void cosine_sim(const double* arrayA, const double* arrayB, int length, double* similarity);
-double cosine_sim(const double* arrayA, const double* arrayB, int length);
+void norm2(const float* array, int length, float* val);
+void printArray(const float* array, int N);
+// void cosine_sim(const float* arrayA, const float* arrayB, int length, float* similarity);
+float cosine_sim(float* arrayA, float* arrayB, int length);
+void cosine_sim_2d(
+    float** matrixA,
+    float** matrixB,
+    float** result_matrix,
+    int num_arrays,
+    int length_arrays
+    );
 void cosine_sim_3d(
-    const double* arrayA,
-    const double* arrayB,
-    double** matrix,
-    int length_matrix,
+    float*** tensorA,
+    float*** tensorB,
+    float** result_matrix,
+    int num_arrays,
+    int length_arrays,
     int length_features
     );
 void readFileAndStoreStrings(const char *filename, char ***strings, int *numStrings, int maxLength);

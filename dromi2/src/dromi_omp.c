@@ -38,24 +38,38 @@ int main() {
 
 
     // run cosine_sim ###################################
-    // double sim = 0.0;
+    // float sim = 0.0;
 
-    int N = 2000;
+    // int N = 2000;
     // int N = 5;
 
+    // dimensions for tensors and matrices
+    int N = 100;
+    int M = 20;
+    int K = 5;
+
     // Allocate the array
-    double* arrayA = (double*)malloc(N * sizeof(double));
-    double* arrayB = (double*)malloc(N * sizeof(double));
+    float* arrayA = (float*)malloc(N * sizeof(float));
+    float* arrayB = (float*)malloc(N * sizeof(float));
 
     // Init a cosine result matrix
     // TODO: only init the upper triangle
-    double **matrix = (double **)malloc(N * sizeof(double *));
+    float **matrix = (float **)malloc(N * sizeof(float *));
     for (int i = 0; i < N; i++)
         {
-            matrix[i] = (double *)malloc(N * sizeof(double));
+            matrix[i] = (float *)malloc(N * sizeof(float));
         }
 
 
+
+    // init a tensor for the 3d calculations
+    float ***tensor = (float ***)malloc(N * sizeof(float **));
+    for (int i = 0; i < N; i++){
+            tensor[i] = (float **)malloc(M * sizeof(float *));
+            for (int j = 0; j < M; j++){
+                tensor[i][j] = (float *)malloc(K * sizeof(float));
+            }
+        }
     // Init test arrays to compute the cos sim
     // This is usually given with the
     #pragma omp parallel for
@@ -67,7 +81,7 @@ int main() {
 
 
     // init matrix data
-    #pragma omp parallel for
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < N; i++)
     {
         for (int j = 0; j < N; j++)
@@ -76,14 +90,28 @@ int main() {
         }
     }
 
+    // init the tensor data
+    #pragma omp parallel for collapse(3)
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < M; j++)
+        {
+            for (int k = 0; k < K; k++)
+            {
+                tensor[i][j][k] = 1.0;
+            }
+
+        }
+    }
+
     // printf("m %f\n", matrix[1][1]);
 
-    double sim = cosine_sim(arrayA, arrayB, N);
-    // printf("Sim: %f\n", sim);
+    float sim = cosine_sim(tensor[0][0], tensor[0][0], K);
+    printf("Sim: %f\n", sim);
 
-    double val = 0.0;
+    float val = 0.0;
 
-    double time = omp_get_wtime();
+    float time = omp_get_wtime();
 
     // #pragma omp parallel for collapse(2)
     // for (int i = 0; i < N; ++i){
@@ -94,11 +122,14 @@ int main() {
     //     }
     // }
 
-    cosine_sim_3d(arrayA, arrayB, matrix, N, N);
+    // cosine_sim_2d(arrayA, arrayB, matrix, N, N);
+    cosine_sim_3d(tensor, tensor, matrix, N, M, K);
 
     time = omp_get_wtime() - time;
     printf("%f\n", time);
-    // printf("m %f\n", matrix[1][2]);
+    printf("tensor %f\n", tensor[1][2][3]);
+    printf("matrix %f\n", matrix[0][0]);
+    printf("matrix %f\n", matrix[1][2]);
 
 
 
@@ -114,6 +145,15 @@ int main() {
         free(matrix[i]);
     }
 
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < M; j++)
+        {
+            free(tensor[i][j]);
+
+        }
+    }
+
     return 0;
 
 
@@ -123,8 +163,8 @@ int main() {
     // int N = 100;
 
     // // Allocate the array
-    // double* arrayA = (double*)malloc(N * sizeof(double));
-    // double* arrayB = (double*)malloc(N * sizeof(double));
+    // float* arrayA = (float*)malloc(N * sizeof(float));
+    // float* arrayB = (float*)malloc(N * sizeof(float));
 
     // #pragma omp parallel for
     // for (int i = 0; i < N; ++i){
@@ -133,12 +173,12 @@ int main() {
     // }
 
     // // Compute the norm
-    // double norm = 0.0;
+    // float norm = 0.0;
     // norm2(arrayA, N, &norm);
 
     // printf("The norm is %f\n", norm);
 
-    // double sim = 0.0;
+    // float sim = 0.0;
     // cosine_sim(arrayA, arrayB, N, &sim);
     // printf("The cosine similarity is %f\n", sim);
 
