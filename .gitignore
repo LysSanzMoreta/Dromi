@@ -9,3 +9,5 @@ tmp_files/
 __pycache__/
 
 build/
+
+dromi/.eggs*

@@ -8,76 +8,41 @@
 
 
 int main() {
-
-
-
-    // Test the hash table ####################################
-
-    // Create a hash table
-    HashTable table;
-    initHashTable(&table);
-    hashAminoAcids(&table);
-
-
-    // Load a file and pad the sequences
-    char **seqs;
-    int numSeqs = 0;
-    int maxLength = 10;  // Desired length for each string
-
-    // Read the file and store strings in the array
-    // readFileAndStoreStrings("seqs.txt", &seqs, &numSeqs, maxLength);
-    // padStringsToMaxLength(seqs, numSeqs, maxLength);
-
-
-    // Retrieve values
-    // printf("apple: %d\n", getHash(&table, "T"));    // Output: 10
-    // printf("banana: %d\n", getHash(&table, "L"));  // Output: 20
-    // printf("cherry: %d\n", getHash(&table, "#"));  // Output: 30
-    // printf("orange: %d\n", getHash(&table, "W"));  // Output: -1 (not found)
-
-
-
-    // run cosine_sim ###################################
-    // float sim = 0.0;
-
-    // int N = 2000;
-    // int N = 5;
-
     // dimensions for tensors and matrices
-    int N = 100;
-    int M = 20;
-    int K = 5;
+    int B = 10; // num batches
+    int N = 6; // num seqs per batch
+    int M = 20; // max seq lenth
+    int K = 5;  // feature length
 
-    // Allocate the array
-    float* arrayA = (float*)malloc(N * sizeof(float));
-    float* arrayB = (float*)malloc(N * sizeof(float));
+    char* filenames[10];
 
-    // Init a cosine result matrix
-    // TODO: only init the upper triangle
+    for (int i = 0; i < 10; i++) {
+        // Allocate memory for each filename and create the pattern "fileX.bin"
+        filenames[i] = malloc(13 * sizeof(char));
+        sprintf(filenames[i], "data_%d.bin", i);
+        printf("%s\n", filenames[i]);
+    }
+
+
+    // Init a result matrix
     float **matrix = (float **)malloc(N * sizeof(float *));
     for (int i = 0; i < N; i++)
         {
             matrix[i] = (float *)malloc(N * sizeof(float));
         }
 
+    // init 2 tensors for the 3d calculations
+    float ***tensorA = (float ***)malloc(N * sizeof(float **));
+    float ***tensorB = (float ***)malloc(N * sizeof(float **));
 
-
-    // init a tensor for the 3d calculations
-    float ***tensor = (float ***)malloc(N * sizeof(float **));
     for (int i = 0; i < N; i++){
-            tensor[i] = (float **)malloc(M * sizeof(float *));
+            tensorA[i] = (float **)malloc(M * sizeof(float *));
+            tensorB[i] = (float **)malloc(M * sizeof(float *));
             for (int j = 0; j < M; j++){
-                tensor[i][j] = (float *)malloc(K * sizeof(float));
+                tensorA[i][j] = (float *)malloc(K * sizeof(float));
+                tensorB[i][j] = (float *)malloc(K * sizeof(float));
             }
         }
-    // Init test arrays to compute the cos sim
-    // This is usually given with the
-    #pragma omp parallel for
-    for (int i = 0; i < N; ++i){
-        arrayA[i] = i;
-        arrayB[i] = i;
-    }
-    // arrayB[N-1] = 0.0;
 
 
     // init matrix data
@@ -90,56 +55,70 @@ int main() {
         }
     }
 
-    // init the tensor data
-    #pragma omp parallel for collapse(3)
-    for (int i = 0; i < N; i++)
-    {
-        for (int j = 0; j < M; j++)
-        {
-            for (int k = 0; k < K; k++)
-            {
-                tensor[i][j][k] = 1.0;
-            }
-
-        }
-    }
-
-    // printf("m %f\n", matrix[1][1]);
-
-    float sim = cosine_sim(tensor[0][0], tensor[0][0], K);
-    printf("Sim: %f\n", sim);
-
-    float val = 0.0;
-
-    float time = omp_get_wtime();
-
-    // #pragma omp parallel for collapse(2)
-    // for (int i = 0; i < N; ++i){
-    //     for (int j = 0; j < N; ++j){
-    //         val = cosine_sim(arrayA, arrayB, N);
-    //         matrix[i][j] = val;
-    //         // printf("(%d, %d) sim: %f\n", i, j, val);
+    // // init the tensor data
+    // #pragma omp parallel for collapse(3)
+    // for (int i = 0; i < N; i++)
+    // {
+    //     for (int j = 0; j < M; j++)
+    //     {
+    //         for (int k = 0; k < K; k++)
+    //         {
+    //             tensorA[i][j][k] = 1.0;
+    //             tensorB[i][j][k] = 1.0;
+    //         }
     //     }
     // }
+    // tensorB[0][19][0] = 0.0;
+    // tensorB[0][18][0] = 0.0;
+    // tensorB[0][17][0] = 0.0;
 
-    // cosine_sim_2d(arrayA, arrayB, matrix, N, N);
-    cosine_sim_3d(tensor, tensor, matrix, N, M, K);
+
+    // Run the batched cosine sim
+    float time = omp_get_wtime();
+
+    if (B > 2) {
+        for (int i = 0; i < B; ++i)
+        {
+            load_tensor_binary(filenames[i], &tensorA, &N, &M, &K);
+            for (int j = i+1; j < B; ++j)
+            {
+                // TODO: Load the data into the 2 tensors
+                load_tensor_binary(filenames[j], &tensorB, &N, &M, &K);
+
+                // Compute the similarities
+                cosine_sim_3d_masked(tensorA, tensorB, matrix, N, M, K);
+                printf("batch: %d vs %d\n", i, j);
+
+                // TODO: save the matrix as a
+                // binary file with the batch ids
+
+
+            }
+        }
+    } else {
+        // TODO: Load only 1 tensor since B=1
+
+
+        // Compute the similarities
+        cosine_sim_3d(tensorA, tensorA, matrix, N, M, K);
+
+
+        // TODO: save the matrix as a
+        // binary file with the batch ids
+
+    }
+
 
     time = omp_get_wtime() - time;
-    printf("%f\n", time);
-    printf("tensor %f\n", tensor[1][2][3]);
+    printf("time: %f\n", time);
+    printf("tensor %f\n", tensorA[1][2][3]);
     printf("matrix %f\n", matrix[0][0]);
     printf("matrix %f\n", matrix[1][2]);
 
 
 
 
-    // Free memory
-    freeHashTable(&table);
-    freeStrings(seqs, numSeqs);
-
-    free(arrayA);
-    free(arrayB);
+    // Free memory again
 
     for (int i = 0; i < N; ++i){
         free(matrix[i]);
@@ -149,39 +128,10 @@ int main() {
     {
         for (int j = 0; j < M; j++)
         {
-            free(tensor[i][j]);
-
+            free(tensorA[i][j]);
+            free(tensorB[i][j]);
         }
     }
 
     return 0;
-
-
-    // Cosine example
-        // // init an array
-
-    // int N = 100;
-
-    // // Allocate the array
-    // float* arrayA = (float*)malloc(N * sizeof(float));
-    // float* arrayB = (float*)malloc(N * sizeof(float));
-
-    // #pragma omp parallel for
-    // for (int i = 0; i < N; ++i){
-    //     arrayA[i] = i;
-    //     arrayB[i] = i;
-    // }
-
-    // // Compute the norm
-    // float norm = 0.0;
-    // norm2(arrayA, N, &norm);
-
-    // printf("The norm is %f\n", norm);
-
-    // float sim = 0.0;
-    // cosine_sim(arrayA, arrayB, N, &sim);
-    // printf("The cosine similarity is %f\n", sim);
-
-
-
 }

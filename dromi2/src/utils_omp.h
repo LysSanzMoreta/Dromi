@@ -35,6 +35,21 @@ void cosine_sim_3d(
     int length_arrays,
     int length_features
     );
+void cosine_sim_3d_masked(
+    float*** tensorA,
+    float*** tensorB,
+    float** result_matrix,
+    int num_arrays,
+    int length_arrays,
+    int length_features
+    );
+void load_tensor_binary(
+    const char *filename,
+    float ****tensor,
+    int *x_dim,
+    int *y_dim,
+    int *z_dim
+    );
 void readFileAndStoreStrings(const char *filename, char ***strings, int *numStrings, int maxLength);
 void padStringsToMaxLength(char **strings, int numStrings, int maxLength);
 void freeStrings(char **strings, int numStrings);

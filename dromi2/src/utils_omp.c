@@ -68,31 +68,152 @@ void cosine_sim_3d(
     int length_features
     ){
 
-    // Only compute the upper triangle
     #pragma omp parallel for collapse(2)
     for (int i = 0; i < num_arrays; ++i)
     {
-        for (int j = i+1; j < num_arrays; ++j)
+        for (int j = 0; j < num_arrays; ++j)
         {
             // Now, we are working with a matrix of
             // dim: (length_arrays, length_arrays, length_features)
             // in the simple case, we just take the mean of the
             // cos_sims
-            // to normalise we take the upper triangle minus the diag
-            int num_elements = length_arrays*(length_arrays+1)/2-length_arrays;
+            // TODO: only compute the diag over the length_arrays
+            // we could also iter over a neighbourhood of vals
             float sum = 0.0;
+            float normaliser = (float)length_arrays;
+            normaliser = normaliser*normaliser;
+
             #pragma omp parallel for collapse(2)
             for (int k = 0; k < length_arrays; ++k)
             {
-                for (int l = k+1; l < length_arrays; ++l)
+                for (int l = 0; l < length_arrays; ++l)
                 {
                     sum += cosine_sim(tensorA[i][k], tensorB[j][l], length_features);
                 }
             }
-            result_matrix[i][j] = sum/num_elements;
+            result_matrix[i][j] = sum/normaliser;
         }
     }
 }
+
+
+void cosine_sim_3d_masked(
+    float*** tensorA,
+    float*** tensorB,
+    float** result_matrix,
+    int num_arrays,
+    int length_arrays,
+    int length_features
+    ){
+
+    #pragma omp parallel for collapse(2)
+    for (int i = 0; i < num_arrays; ++i)
+    {
+        for (int j = 0; j < num_arrays; ++j)
+        {
+            // Now, we are working with a matrix of
+            // dim: (length_arrays, length_arrays, length_features)
+            // in the simple case, we just take the mean of the
+            // cos_sims
+            // TODO: only compute the diag over the length_arrays
+            // we could also iter over a neighbourhood of vals
+            float sum = 0.0;
+            int normaliser = length_arrays;
+
+            #pragma omp parallel for collapse(2)
+            for (int k = 0; k < length_arrays; ++k)
+            {
+                for (int l = 0; l < length_arrays; ++l)
+                {
+                    if(k==l)
+                    {
+                        if(tensorA[i][k][0] != 0.0 && tensorB[i][k][0] != 0.0)
+                        {
+                            sum += cosine_sim(tensorA[i][k], tensorB[j][l], length_features);
+                        } else {
+                            normaliser -= 1;
+                        }
+                    }
+                }
+            }
+            result_matrix[i][j] = sum/(float)normaliser;
+        }
+    }
+}
+
+
+
+void load_tensor_binary(
+    const char *filename,
+    float ****tensor,
+    int *x_dim,
+    int *y_dim,
+    int *z_dim
+    ) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Error opening file");
+        exit(1);
+    }
+
+    // Read the dimensions (3 integers)
+    if (fread(x_dim, sizeof(int), 1, file) != 1 ||
+        fread(y_dim, sizeof(int), 1, file) != 1 ||
+        fread(z_dim, sizeof(int), 1, file) != 1) {
+        perror("Error reading dimensions");
+        exit(1);
+    }
+
+    // Read the tensor data from the file into the 3D tensor
+    for (int i = 0; i < *x_dim; i++) {
+        for (int j = 0; j < *y_dim; j++) {
+            if (fread((*tensor)[i][j], sizeof(float), *z_dim, file) != *z_dim) {
+                perror("Error reading tensor data");
+                exit(1);
+            }
+        }
+    }
+
+    fclose(file);
+}
+
+// void cosine_sim_3d_batch(
+//     float*** tensorA,
+//     float*** tensorB,
+//     float** result_matrix,
+//     int batch_size,
+//     int num_arrays,
+//     int length_arrays,
+//     int length_features
+//     ){
+
+//     // Only compute the upper triangle
+//     #pragma omp parallel for collapse(2)
+//     for (int i = 0; i < num_arrays; ++i)
+//     {
+//         for (int j = 0; j < num_arrays; ++j)
+//         {
+//             // Now, we are working with a matrix of
+//             // dim: (batch_size, length_arrays, length_arrays, length_features)
+//             // in the simple case, we just take the mean of the
+//             // cos_sims
+//             // TODO: only compute the diag over the length_arrays
+//             // we could also iter over a neighbourhood of vals
+//             float sum = 0.0;
+//             float normaliser = (float)length_arrays;
+//             normaliser = normaliser*normaliser;
+//             #pragma omp parallel for collapse(2)
+//             for (int k = 0; k < length_arrays; ++k)
+//             {
+//                 for (int l = 0; l < length_arrays; ++l)
+//                 {
+//                     sum += cosine_sim(tensorA[i][k], tensorB[j][l], length_features);
+//                 }
+//             }
+//             result_matrix[i][j] = sum/normaliser;
+//         }
+//     }
+// }
 
 
 void readFileAndStoreStrings(const char *filename, char ***strings, int *numStrings, int maxLength) {
