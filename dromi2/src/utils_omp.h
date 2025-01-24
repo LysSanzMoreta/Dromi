@@ -50,6 +50,12 @@ void load_tensor_binary(
     int *y_dim,
     int *z_dim
     );
+void save_matrix_binary(
+    const char *filename,
+    float ***matrix,
+    int *x_dim,
+    int *y_dim
+);
 void readFileAndStoreStrings(const char *filename, char ***strings, int *numStrings, int maxLength);
 void padStringsToMaxLength(char **strings, int numStrings, int maxLength);
 void freeStrings(char **strings, int numStrings);

@@ -177,6 +177,30 @@ void load_tensor_binary(
     fclose(file);
 }
 
+
+void save_matrix_binary(
+    const char *filename,
+    float ***matrix,
+    int *x_dim,
+    int *y_dim
+) {
+    FILE *file = fopen(filename, "wb");
+    if (!file) {
+        perror("Failed to open file for writing");
+        exit(1);
+    }
+
+    // Write dimensions of the tensor
+    fwrite(&x_dim, sizeof(int), 1, file);
+    fwrite(&y_dim, sizeof(int), 1, file);
+
+    // Write the data (assuming the matrix is a 1D array representing the 2D matrix)
+    size_t matrix_size = *x_dim * *y_dim ;
+    fwrite(matrix, sizeof(float), matrix_size, file);
+
+    fclose(file);
+}
+
 // void cosine_sim_3d_batch(
 //     float*** tensorA,
 //     float*** tensorB,
