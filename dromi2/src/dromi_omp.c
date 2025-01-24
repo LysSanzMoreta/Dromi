@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Run the batched cosine sim
-    float time = omp_get_wtime();
+    // float time = omp_get_wtime();
 
     if (B > 2) {
         for (int i = 0; i < B; ++i)
@@ -149,8 +149,8 @@ int main(int argc, char* argv[]) {
     }
 
 
-    time = omp_get_wtime() - time;
-    printf("time needed: %f sec\n", time);
+    // time = omp_get_wtime() - time;
+    // printf("time needed: %f sec\n", time);
 
 
 
