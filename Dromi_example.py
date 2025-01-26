@@ -4,40 +4,68 @@
 Dromi: Python package for parallel computation of similarity measures among vector-encoded sequences
 =======================
 """
-import os,sys,argparse
+import os, sys, argparse
 import time
 import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
 from argparse import RawTextHelpFormatter
 import numpy as np
-local_repository=True
+
+# from numpy.distutils.fcompiler import str2bool
+
+local_repository = True
 script_dir = os.path.dirname(os.path.abspath(__file__))
+
 if local_repository:
-     sys.path.insert(1, "{}/dromi/src".format(script_dir))
-     import dromi
-else:#pip installed module
-     import dromi
+    sys.path.insert(1, "{}/dromi/src".format(script_dir))
+    import dromi
+else:  # pip installed module
+    import dromi
 import dromi.utils as DromiUtils
 import dromi.similarities as DromiSimilarities
 import dromi.mutual_information as DromiMI
 
 print("Loading dromi module from {}".format(dromi.__file__))
-def plot_heatmap(array, title,file_name):
+
+
+def plot_heatmap(array, title, file_name):
     """Plot heatmap of array
     :param array: Numpy array
     :param title: Plot title
     :param file_name"""
     print("Visualizing heatmap...")
     fig = plt.figure(figsize=(20, 20))
-    ax = sns.heatmap(array, cmap='RdYlGn_r',yticklabels=False,xticklabels=False)
+    ax = sns.heatmap(array, cmap='RdYlGn_r', yticklabels=False, xticklabels=False)
     ax.collections[0].set_clim(0, 1)
-    plt.title(title,fontsize=20)
+    plt.title(title, fontsize=20)
     plt.savefig(file_name)
     plt.clf()
     plt.close(fig)
 
-def example_blosum_encoded_sequences(unique_characters=21,random_seqs=False):
+
+def select_plots(args, results, storage_folder, suffix):
+    """Performs different plots according to the selected arguments in the cli"""
+    if args.metric in ["cosine", "all"]:
+        plot_heatmap(results.cosine_similarity_mean, "HEATMAP Cosine similarity mean",
+                     "{}/HEATMAP_cosine_similarity_mean{}".format(storage_folder, suffix))
+        if args.calculate_kmers:
+            plot_heatmap(results.kmers_cosine_similarity_mean, "HEATMAP Kmers cosine similarity mean",
+                         "{}/HEATMAP_kmers_cosine_similarity_mean{}".format(storage_folder, suffix))
+
+    if args.metric in ["pairwise", "all"]:
+        plot_heatmap(results.percent_identity_mean, "HEATMAP Percent Identity mean",
+                     "{}/HEATMAP_pecent_id_mean{}".format(storage_folder, suffix))
+        if args.calculate_kmers:
+            plot_heatmap(results.kmers_pid_similarity, "HEATMAP Kmers percent identity mean",
+                         "{}/HEATMAP_kmers_pid_similarity{}".format(storage_folder, suffix))
+
+    if args.metric == "cosine" and args.calculate_positional_weights:
+        plot_heatmap(results.positional_weights, "HEATMAP Positional weights",
+                     "{}/HEATMAP_positional_weights{}".format(storage_folder, suffix))
+
+
+def example_blosum_encoded_sequences(unique_characters=21, random_seqs=False):
     """The similarity computations are performed excluding self similarity. The current position is compared to the other positions in the same site.
     NOTE: I have only implemented similarity matrix with paddings at the end, if requested I might look into paddings with other distributions
     """
@@ -47,81 +75,157 @@ def example_blosum_encoded_sequences(unique_characters=21,random_seqs=False):
         max_len = len(max(seqs, key=len))
 
     else:
-        seqs = ["AHPDYRMPIL"] * 1000
-        # seqs = ["AHPDYRM",
-        #         "AHPHYRM",
-        #         "AKPDYRM",
-        #         "AHPDYRM",
-        #         "AHPDYRM",
-        #         "FYRA",
-        #         "MRSTVI"]
+        # seqs = ["AHPDYRMPIL"] * 1000
+        seqs = ["AHPDYRM",
+                "AHPHYRM",
+                "AKPDYRM",
+                "AHPDYRM",
+                "AHPDYRM",
+                "FYRA",
+                "MRSTVI"]
         # seqs = [
-        #         "RGICWMLV",
-        #         "RGICWMLV",
-        #         "RGVCWMLV",
-        #         "RGVCWMLV",
-        #         "RGACWMLV",
-        #         "RGACFMLV",
-        #         "RGLCYMLV",
-        #         "RGLCYMLV",
-        #         "RGICYMLV",
-        #         "RGICYMLV",
+        #     "RGICWMLV",
+        #     "RGICWMLV",
+        #     "RGVCWMLV",
+        #     "RGVCWMLV",
+        #     "RGACWMLV",
+        #     "RGACFMLV",
+        #     "RGLCYMLV",
+        #     "RGLCYMLV",
+        #     "RGICYMLV",
+        #     "RGICYMLV",
         # ]
         max_len = len(max(seqs, key=len))
 
-        padding_result = DromiUtils.SequencePadding(seqs, max_len, method="ends",shuffle=False).run()
+        padding_result = DromiUtils.SequencePadding(seqs, max_len, method="ends", shuffle=False).run()
         sequences, sequences_padded = zip(*padding_result)  # unpack list of tuples onto 2 lists
 
     blosum_array, blosum_dict, blosum_array_dict = DromiUtils.create_blosum(unique_characters, "BLOSUM62",
-                                                                               zero_characters=["#"],
-                                                                               include_zero_characters=True)
+                                                                            zero_characters=["#"],
+                                                                            include_zero_characters=True)
 
     aa_dict = DromiUtils.aminoacid_names_dict(21, zero_characters=["#"])
     sequences_array = np.array(sequences_padded)
     sequences_int = np.vectorize(aa_dict.get)(sequences_array)
-    sequences_blosum = np.vectorize(blosum_array_dict.get,signature='()->(n)')(sequences_int)
+    sequences_blosum = np.vectorize(blosum_array_dict.get, signature='()->(n)')(sequences_int)
     sequences_mask = sequences_int.astype(bool)
     storage_folder = "{}".format(script_dir)
     start = time.time()
 
-    results = DromiSimilarities.calculate_similarities_ondisk(sequences_blosum,max_len,sequences_mask,storage_folder,batch_size=300,ksize=3,neighbours=1)
+    if args.runtime == "ram":
+        results = DromiSimilarities.calculate_similarities(sequences_blosum, max_len, sequences_mask, storage_folder,
+                                                           batch_size=5,
+                                                           ksize=3,
+                                                           neighbours=1,
+                                                           metric=args.metric,
+                                                           calculate_kmers=args.calculate_kmers,
+                                                           calculate_positional_weights=args.calculate_positional_weights)
+
+
+    elif args.runtime == "disk":
+        results = DromiSimilarities.calculate_similarities_ondisk(sequences_blosum, max_len, sequences_mask,
+                                                                  storage_folder,
+                                                                  batch_size=1,
+                                                                  ksize=3,
+                                                                  neighbours=1,
+                                                                  metric=args.metric,
+                                                                  calculate_kmers=args.calculate_kmers,
+                                                                  calculate_positional_weights=args.calculate_positional_weights)
+
     stop = time.time()
-    print("Finished in {}".format(str(datetime.timedelta(seconds=stop-start))))
-    plot_heatmap(results.positional_weights,"HEATMAP Positional weights","{}/HEATMAP_positional_weights".format(storage_folder))
-    plot_heatmap(results.percent_identity_mean,"HEATMAP Percent Identity mean","{}/HEATMAP_pecent_id_mean".format(storage_folder))
-    plot_heatmap(results.cosine_similarity_mean,"HEATMAP Cosine similarity mean","{}/HEATMAP_cosine_similarity_mean".format(storage_folder))
-    plot_heatmap(results.kmers_pid_similarity,"HEATMAP Kmers percent identity mean","{}/HEATMAP_kmers_pid_similarity".format(storage_folder))
-    plot_heatmap(results.kmers_cosine_similarity_mean,"HEATMAP Kmers cosine similarity mean","{}/HEATMAP_kmers_cosine_similarity_mean".format(storage_folder))
+    print("Finished in {}".format(str(datetime.timedelta(seconds=stop - start))))
+    # TODO: Positional weights are returned also when rgs.metric == <pairwise>
+    # TODO: Test runtime with and without deleting objects and gc.collect
+    select_plots(args, results, storage_folder)
+
 
 def example_mutual_information():
     """On disk computation of Mutual information between continuous random variables"""
 
-    gene_expression_matrix = np.random.rand(2000,503)
-    mi_results = DromiMI.calculate_mutual_information(gene_expression_matrix,bins=5)
+    gene_expression_matrix = np.random.rand(2000, 503)
+    mi_results = DromiMI.calculate_mutual_information(gene_expression_matrix, bins=5)
 
     results_dir = ""
     name = ""
     results_dir = "" if not results_dir else f"{results_dir}/"
     name = "" if not name else f"_{name}"
     np.save("{}Mutual_information{}.npy".format(results_dir, name), mi_results["mutual_information"])
-    np.save("{}Mutual_information_normalized{}.npy".format(results_dir,name),mi_results["normalized_mutual_information"])
+    np.save("{}Mutual_information_normalized{}.npy".format(results_dir, name),
+            mi_results["normalized_mutual_information"])
+
+
+def example_vector_encoded_sequences():  # TODO: Refactor
+    # sequences = np.load("data/protein_subset.npy")
+    sequences = np.load("data/full_set.npy")
+
+    max_len = 75
+    storage_folder = "{}".format(script_dir)
+    start = time.time()
+
+    if args.runtime == "ram":
+        results = DromiSimilarities.calculate_similarities(sequences,
+                                                           max_len,
+                                                           None,
+                                                           storage_folder,
+                                                           batch_size=10,
+                                                           ksize=3,
+                                                           neighbours=1,
+                                                           calculate_positional_weights=False)
+
+
+    elif args.runtime == "disk":
+
+        results = DromiSimilarities.calculate_similarities_ondisk(sequences,
+                                                                  max_len,
+                                                                  None,
+                                                                  storage_folder,
+                                                                  batch_size=10,
+                                                                  ksize=3,
+                                                                  neighbours=1,
+                                                                  calculate_positional_weights=False)
+    stop = time.time()
+    print("Finished in {}".format(str(datetime.timedelta(seconds=stop - start))))
+    select_plots(args, results, storage_folder)
+
 
 def parse_args(parser):
-    parser.add_argument('-analysis', type=str, nargs='?', default="cosine",
-                        help='<cosine> \n'
+    parser.add_argument('-analysis', type=str, nargs='?', default="similarities",
+                        help='Whether to calculate sequence similarities (cosine, percent identity) or mutual information'
+                             '<similarities> \n'
                              '<mutualinfo>')
+
+    parser.add_argument('-runtime', type=str, nargs='?', default="ram",
+                        help='How to compute/store the calculations'
+                             '<ram>: The chunked results are computed and accumulated on RAM \n'
+                             '<disk>: The results arrays are initialized on disk and filled up with the chunked computations made by the RAM')
+    parser.add_argument('-metric', type=str, nargs='?', default="cosine",
+                        help='Type of sequence similarities metric (cosine, pairwise, use when args.analysis == <similarities>'
+                             '<cosine> \n'
+                             '<pairwise>: Percent identity \n'
+                             '<all>: calculates both cosine and percent identity metrics')
+
+    parser.add_argument('-calculate_kmers', action=argparse.BooleanOptionalAction, default=False,
+                        help='Add calculation of kmers similarity, use when args.analysis == <similarities>. Example: If args.metric is <cosine> then it will calculate the kmers cosine similarity'
+                             '<True>\n'
+                             '<False>')
+
+    parser.add_argument('-calculate_positional_weights', action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help='Add calculation of positional weights, use when args.analysis == <similarities>.'
+                             '<True>\n'
+                             '<False>')
 
     args = parser.parse_args()
 
     return args
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Dromi args",formatter_class=RawTextHelpFormatter)
 
-    args = parse_args(parser)
-    if args.analysis == "cosine":
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Dromi args", formatter_class=RawTextHelpFormatter)
+
+    args = parse_args(parser)  # This was separated for the GUI program with Gooey, eventually can be re-merged
+    if args.analysis == "similarities":
         example_blosum_encoded_sequences()
+        # example_vector_encoded_sequences()
     elif args.analysis == "mutualinfo":
         example_mutual_information()
-
-
