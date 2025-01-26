@@ -23,7 +23,8 @@ SimilarityResults = namedtuple("SimilarityResults",
                                 "kmers_pid_similarity", "kmers_cosine_similarity_mean"])
 
 
-def cosine_similarity(a, b, correlation_matrix=False, parallel=False):  # TODO: import from utils?
+def cosine_similarity(a: np.ndarray, b: np.ndarray, correlation_matrix=False,
+                      parallel=False):  # TODO: import from utils?
     """Calculates the cosine similarity between 2 arrays.
     :param numpy array a: (max_len,aa_types) or (num_seq,max_len, aa_types)
     :param numpy array b: (max_len,aa_types) or (num_seq,max_len, aa_types)

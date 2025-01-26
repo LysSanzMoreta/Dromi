@@ -441,61 +441,10 @@ class SequenceRandomGeneration(object):
             return (seq, seq)
 
 
-def retrieve_iterable_indexes_old(splits):
-    # TODO: Compute with cumsum
-    idx = list(range(len(splits)))
-    shifts = []
-    start_store_points = []
-    start_store_points_i = []
-    store_point_helpers = []
-    end_store_points = []
-    end_store_points_i = []
-    i_idx = []
-    j_idx = []
-    start_store_point = 0
-    store_point_helper = 0
-    end_store_point = splits[0].shape[0]
-
-    for i in idx:
-        shift = i
-        rest_splits = splits.copy()[shift:]
-        start_store_point_i = 0 + store_point_helper
-        end_store_point_i = rest_splits[0].shape[0] + store_point_helper  # initialize
-        for j, r_j in enumerate(
-                rest_splits):  # calculate distance among all kmers per sequence in the block (n, n_kmers,n_kmers)
-            i_idx.append(i)
-            shifts.append(shift)
-            j_idx.append(j)
-            start_store_points.append(start_store_point)
-            store_point_helpers.append(store_point_helper)
-            end_store_points.append(end_store_point)
-            start_store_points_i.append(start_store_point_i)
-            end_store_points_i.append(end_store_point_i)
-            start_store_point_i = end_store_point_i  # + store_point_helper
-            if j + 1 < len(rest_splits):
-                end_store_point_i += rest_splits[j + 1].shape[0]  # + store_point_helper# it has to be the next r_j
-        start_store_point = end_store_point
-        if i + 1 < len(splits):
-            store_point_helper += splits[i + 1].shape[0]
-        if i + 1 != len(splits):
-            end_store_point += splits[i + 1].shape[0]  # it has to be the next curr_array
-        else:
-            pass
-
-    args_iterables = {"i_idx": i_idx,
-                      "j_idx": j_idx,
-                      "shifts": shifts,
-                      "start_store_points": start_store_points,
-                      "end_store_points": end_store_points,
-                      "store_point_helpers": store_point_helpers,
-                      "start_store_points_i": start_store_points_i,
-                      "end_store_points_i": end_store_points_i
-                      }
-
-    return args_iterables
-
-
 def retrieve_iterable_indexes(splits):
+    """
+    Given a matrix
+    """
     idx = list(range(len(splits)))
     shifts = []
     start_store_points = []
