@@ -10,3 +10,5 @@ data/*
 __pycache__/
 
 build/
+
+dromi/.eggs*
