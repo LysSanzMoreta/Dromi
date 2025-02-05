@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from argparse import RawTextHelpFormatter
 import numpy as np
-
-# from numpy.distutils.fcompiler import str2bool
+from collections import namedtuple
+from typing import Union
 
 local_repository = True
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -29,7 +29,7 @@ import dromi.mutual_information as DromiMI
 print("Loading dromi module from {}".format(dromi.__file__))
 
 
-def plot_heatmap(array, title, file_name):
+def plot_heatmap(array: np.ndarray, title: str, file_name: str):
     """Plot heatmap of array
     :param array: Numpy array
     :param title: Plot title
@@ -44,7 +44,7 @@ def plot_heatmap(array, title, file_name):
     plt.close(fig)
 
 
-def select_plots(args, results, storage_folder, suffix):
+def select_plots(args: argparse.Namespace, results: namedtuple, storage_folder, suffix: str):
     """Performs different plots according to the selected arguments in the cli"""
     if args.metric in ["cosine", "all"]:
         plot_heatmap(results.cosine_similarity_mean, "HEATMAP Cosine similarity mean",
@@ -52,7 +52,6 @@ def select_plots(args, results, storage_folder, suffix):
         if args.calculate_kmers:
             plot_heatmap(results.kmers_cosine_similarity_mean, "HEATMAP Kmers cosine similarity mean",
                          "{}/HEATMAP_kmers_cosine_similarity_mean{}".format(storage_folder, suffix))
-
     if args.metric in ["pairwise", "all"]:
         plot_heatmap(results.percent_identity_mean, "HEATMAP Percent Identity mean",
                      "{}/HEATMAP_pecent_id_mean{}".format(storage_folder, suffix))
@@ -65,7 +64,45 @@ def select_plots(args, results, storage_folder, suffix):
                      "{}/HEATMAP_positional_weights{}".format(storage_folder, suffix))
 
 
-def example_blosum_encoded_sequences(unique_characters=21, random_seqs=False):
+def calculate_similarities_options(array: np.ndarray, max_len: Union[int, float], array_mask: np.ndarray,
+                                   storage_folder: str, args: argparse.Namespace):
+    if args.runtime == "ram":
+        results, final_time = DromiSimilarities.calculate_similarities(array, max_len, array_mask, storage_folder,
+                                                                       batch_size=1,
+                                                                       ksize=3,
+                                                                       neighbours=1,
+                                                                       metric=args.metric,
+                                                                       calculate_kmers=args.calculate_kmers,
+                                                                       calculate_positional_weights=args.calculate_positional_weights)
+
+    elif args.runtime == "disk":
+        results, final_time = DromiSimilarities.calculate_similarities_ondisk(array, max_len, array_mask,
+                                                                              storage_folder,
+                                                                              batch_size=1,
+                                                                              ksize=3,
+                                                                              neighbours=1,
+                                                                              metric=args.metric,
+                                                                              calculate_kmers=args.calculate_kmers,
+                                                                              calculate_positional_weights=args.calculate_positional_weights)
+    elif args.runtime == "cuda_cpu":
+        results, final_time = DromiSimilarities.calculate_similarities_cuda_cpu(array, max_len, array_mask,
+                                                                                storage_folder,
+                                                                                batch_size=1,
+                                                                                ksize=3,
+                                                                                neighbours=1,
+                                                                                metric=args.metric,
+                                                                                calculate_kmers=args.calculate_kmers,
+                                                                                calculate_positional_weights=args.calculate_positional_weights)
+
+    c = results.cosine_similarity_mean
+    print(c)
+    #
+    # exit()
+
+    return results
+
+
+def example_blosum_encoded_sequences(unique_characters: Union[int, float] = 21, random_seqs: bool = False):
     """The similarity computations are performed excluding self similarity. The current position is compared to the other positions in the same site.
     NOTE: I have only implemented similarity matrix with paddings at the end, if requested I might look into paddings with other distributions
     """
@@ -112,31 +149,13 @@ def example_blosum_encoded_sequences(unique_characters=21, random_seqs=False):
     storage_folder = "{}".format(script_dir)
     start = time.time()
 
-    if args.runtime == "ram":
-        results = DromiSimilarities.calculate_similarities(sequences_blosum, max_len, sequences_mask, storage_folder,
-                                                           batch_size=5,
-                                                           ksize=3,
-                                                           neighbours=1,
-                                                           metric=args.metric,
-                                                           calculate_kmers=args.calculate_kmers,
-                                                           calculate_positional_weights=args.calculate_positional_weights)
-
-
-    elif args.runtime == "disk":
-        results = DromiSimilarities.calculate_similarities_ondisk(sequences_blosum, max_len, sequences_mask,
-                                                                  storage_folder,
-                                                                  batch_size=1,
-                                                                  ksize=3,
-                                                                  neighbours=1,
-                                                                  metric=args.metric,
-                                                                  calculate_kmers=args.calculate_kmers,
-                                                                  calculate_positional_weights=args.calculate_positional_weights)
+    results = calculate_similarities_options(sequences_blosum, max_len, sequences_mask, f"{storage_folder}", args)
 
     stop = time.time()
     print("Finished in {}".format(str(datetime.timedelta(seconds=stop - start))))
     # TODO: Positional weights are returned also when rgs.metric == <pairwise>
     # TODO: Test runtime with and without deleting objects and gc.collect
-    select_plots(args, results, storage_folder)
+    select_plots(args, results, storage_folder, f"_{args.runtime}")
 
 
 def example_mutual_information():
@@ -162,27 +181,8 @@ def example_vector_encoded_sequences():  # TODO: Refactor
     storage_folder = "{}".format(script_dir)
     start = time.time()
 
-    if args.runtime == "ram":
-        results = DromiSimilarities.calculate_similarities(sequences,
-                                                           max_len,
-                                                           None,
-                                                           storage_folder,
-                                                           batch_size=10,
-                                                           ksize=3,
-                                                           neighbours=1,
-                                                           calculate_positional_weights=False)
+    results = calculate_similarities_options(sequences, max_len, None, storage_folder, args)
 
-
-    elif args.runtime == "disk":
-
-        results = DromiSimilarities.calculate_similarities_ondisk(sequences,
-                                                                  max_len,
-                                                                  None,
-                                                                  storage_folder,
-                                                                  batch_size=10,
-                                                                  ksize=3,
-                                                                  neighbours=1,
-                                                                  calculate_positional_weights=False)
     stop = time.time()
     print("Finished in {}".format(str(datetime.timedelta(seconds=stop - start))))
     select_plots(args, results, storage_folder)
@@ -196,8 +196,10 @@ def parse_args(parser):
 
     parser.add_argument('-runtime', type=str, nargs='?', default="ram",
                         help='How to compute/store the calculations'
-                             '<ram>: The chunked results are computed and accumulated on RAM \n'
-                             '<disk>: The results arrays are initialized on disk and filled up with the chunked computations made by the RAM')
+                             '<ram>: Python-native The chunked results are computed and accumulated on RAM \n'
+                             '<disk>: The results arrays are initialized on disk and filled up with the chunked computations made by the RAM'
+                             '<cuda-cpu>: Splits and stores the array into binary files that are used by a C-version of the cosine similarity function '
+                        )
     parser.add_argument('-metric', type=str, nargs='?', default="cosine",
                         help='Type of sequence similarities metric (cosine, pairwise, use when args.analysis == <similarities>'
                              '<cosine> \n'
@@ -229,3 +231,62 @@ if __name__ == "__main__":
         # example_vector_encoded_sequences()
     elif args.analysis == "mutualinfo":
         example_mutual_information()
+
+    """
+    disk batch 3
+    
+[[1.         0.91699219 0.91503906 1.         0.99989832 0.35865713 0.34929686]
+ [0.91699219 1.         0.83203125 0.91699219 0.91705206 0.29680633 0.29621005]
+ [0.91503906 0.83203125 1.         0.91503906 0.91523214 0.2172862 0.41001359]
+ [1.         0.91699219 0.91503906 1.         0.99989832 0.35865713 0.34929686]
+ [0.99989832 0.91705206 0.91523214 0.99989832 1.         0.35864258 0.34936523]
+ [0.35865713 0.29680633 0.2172862  0.35865713 0.35864258 0.99951172 0.4453125 ]
+ [0.34929686 0.29621005 0.41001359 0.34929686 0.34936523 0.4453125 1.        ]]
+  
+  
+  ram batch 3
+    
+[[1.     0.917  0.9155 1.     1.     0.3586 0.3494]
+ [0.917  1.     0.8325 0.917  0.917  0.2966 0.2961]
+ [0.9155 0.8325 1.     0.9155 0.9155 0.2173 0.4102]
+ [1.     0.917  0.9155 1.     1.     0.3586 0.3494]
+ [1.     0.917  0.9155 1.     1.     0.3586 0.3494]
+ [0.3586 0.2966 0.2173 0.3586 0.3586 1.     0.4453]
+ [0.3494 0.2961 0.4102 0.3494 0.3494 0.4453 1.    ]]
+ 
+
+  disk batch 1
+  
+[[1.         0.91699219 0.91503906 1.         1.         0.35864258 0.34936523]
+ [0.91699219 1.         1.         0.91699219 0.91699219 0.296875   0.29614258]
+ [0.91503906 1.         0.99951172 0.91503906 1.         0.21728516 0.41015625]
+ [1.         0.91699219 0.91503906 1.         1.         0.35864258 0.        ]
+ [1.         0.91699219 1.         1.         1.         0.35864258 0.34936523]
+ [0.35864258 0.296875   0.21728516 0.35864258 0.35864258 0.99951172 0.4453125 ]
+ [0.34936523 0.29614258 0.41015625 0.         0.34936523 0.4453125  1.        ]]
+  
+  
+  ram batch 1
+  
+  [[1.     0.917  0.9155 1.     1.     0.3586 0.3494]
+ [0.917  1.     1.     0.917  0.917  0.2966 0.2961]
+ [0.9155 1.     1.     0.9155 1.     0.2173 0.4102]
+ [1.     0.917  0.9155 1.     1.     0.3586 0.    ]
+ [1.     0.917  1.     1.     1.     0.3586 0.3494]
+ [0.3586 0.2966 0.2173 0.3586 0.3586 1.     0.4453]
+ [0.3494 0.2961 0.4102 0.     0.3494 0.4453 1.    ]]
+ 
+ 
+ ram batch 2
+ 
+ [[1.     0.917  0.9155 1.     1.     0.3586 0.3494]
+ [0.917  1.     0.8325 0.917  0.917  0.2966 0.2961]
+ [0.9155 0.8325 1.     0.9155 0.9155 0.2173 0.4102]
+ [1.     0.917  0.9155 1.     1.     0.     0.3494]
+ [1.     0.917  0.9155 1.     1.     0.3586 0.    ]
+ [0.3586 0.2966 0.2173 0.     0.3586 1.     0.4453]
+ [0.3494 0.2961 0.4102 0.3494 0.     0.4453 1.    ]]
+ 
+  
+    
+    """

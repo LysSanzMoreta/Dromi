@@ -3,7 +3,6 @@ import random
 import numpy as np
 import struct
 from typing import Union
-from dromi.utils import folders
 
 
 def write_3d_array_to_binary(filename, array):

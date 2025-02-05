@@ -12,6 +12,7 @@ import Bio.Align
 import itertools
 import os
 import shutil
+import struct
 
 
 def folders(folder_name: str, basepath: str, overwrite=True):
@@ -524,7 +525,29 @@ def extract_windows_vectorized(array, clearing_time_index, max_time, sub_window_
         return array[:, sub_windows]
 
 
-class RunParallel:
+def write_array_to_binary(filename: str, array: np.ndarray):
+    """Converts a numpy array to binary format readable by C"""
+    if array.ndim == 3:
+        # Get the shape of the array (x, y, z dimensions)
+        x_dim, y_dim, z_dim = array.shape
+
+        # Open the binary file in write mode
+        with open(filename, 'wb') as f:
+            # Write the dimensions as integers (3 integers)
+            f.write(struct.pack('3i', x_dim, y_dim, z_dim))
+
+            # Write the data (flattened array) to the binary file
+            array.astype(np.float32).tofile(f)
+    elif array.ndim == 2:  # the code might not reach here, but we might need it
+        x_dim, y_dim = array.shape
+        with open(filename, 'wb') as f:
+            # Write the dimensions as integers (3 integers)
+            f.write(struct.pack('2i', x_dim, y_dim))
+            # Write the data (flattened array) to the binary file
+            array.astype(np.float32).tofile(f)
+
+
+class RunParallel:  # TODO: delete?
     def __init__(self, iterables, fixed_args, mappable):
         self.mappable = mappable
         self.fixed = fixed_args
