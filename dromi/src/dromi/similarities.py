@@ -12,6 +12,7 @@ import time
 import datetime
 import warnings
 from cgi import print_environ_usage
+from pprint import pprint
 from typing import Union
 import numpy as np
 import multiprocessing
@@ -518,7 +519,7 @@ def process_value_cosine(iterables_args, fixed_args):
 
     i, j, shift, start_store_point, end_store_point, store_point_helper, start_store_point_i, end_store_point_i = iterables_args
     splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, calculate_kmers = fixed_args
-    # print(" ------------  i: {}----------------------------".format(i))
+
     curr_array = splits[i]
     curr_mask = mask_splits[i]
     n_data_curr = curr_array.shape[0]
@@ -527,7 +528,13 @@ def process_value_cosine(iterables_args, fixed_args):
     # start_i = time.time()
     # print("###### j {} ##########################".format(j))
     r_j = rest_splits[j]  # next array
-    r_j_mask = mask_splits[j + shift]
+    r_j_mask = mask_splits[j + shift]  # TODO. why + shift?
+
+    # print("i:", i)
+    # print("j:", j)
+    # print("j + shift:", j + shift)
+    # print(".................")
+
     cosine_sim_j = cosine_similarity(curr_array, r_j, correlation_matrix=False)
 
     # Highlight: Create masks to ignore the paddings of the sequences
@@ -561,6 +568,15 @@ def process_value_cosine(iterables_args, fixed_args):
     cosine_similarity_mean_ij = np.ma.masked_array(cosine_sim_j[:, :, diag_idx_maxlen[0], diag_idx_maxlen[1]],
                                                    mask=~pid_mask_ij, fill_value=0.).mean(
         -1)  # Highlight: In the mask if True means to mask and ignore!!!!
+
+    # if i == 1 and j + shift == 2:
+    #     print("--------------------")
+    #     print(curr_array)
+    #     print(r_j)
+    #     print(cosine_sim_j)
+    #     print(cosine_similarity_mean_ij)
+    #     print("Before")
+
     # KMERS COSINE SIMILARITY ########################
     if calculate_kmers:
         kmers_matrix_cosine_diag_ij = kmers_matrix_cosine_ij[:, :, :, :, diag_idx_ksize[0],
@@ -572,24 +588,35 @@ def process_value_cosine(iterables_args, fixed_args):
         del kmers_mask_ij, kmers_mask_r_j
     else:
         kmers_cosine_similarity_ij, kmers_matrix_cosine_diag_ij = None, None
-    if i == j:  # Highlight: When comparing an array to itself, round to nearest integer the diagonal values, due to precision issues, sometimes it computes 0.999999999 or 1.00000002 instead of 1.
+    if i == j + shift:  # Highlight: When comparing an array to itself, round to nearest integer the diagonal values, due to precision issues, sometimes it computes 0.999999999 or 1.00000002 instead of 1.
         # Faster method that unravels the 2D array to 1D. Equivalent to: kmers_cosine_similarity_ij[np.diag_indices_from(cosine_similarity_mean_ij)] = np.rint(np.diagonal(kmers_cosine_similarity_ij))
         if calculate_kmers:
             kmers_cosine_similarity_ij.ravel()[
             :kmers_cosine_similarity_ij.shape[1] ** 2:kmers_cosine_similarity_ij.shape[1] + 1] = np.rint(
                 kmers_cosine_similarity_ij.ravel()[
                 :kmers_cosine_similarity_ij.shape[1] ** 2:kmers_cosine_similarity_ij.shape[1] + 1])
-
         # Faster method that unravels the 2D array to 1D. Equivalent to: cosine_similarity_mean_ij[np.diag_indices_from(cosine_similarity_mean_ij)] = np.rint(np.diagonal(cosine_similarity_mean_ij))
         cosine_similarity_mean_ij.ravel()[
         :cosine_similarity_mean_ij.shape[1] ** 2:cosine_similarity_mean_ij.shape[1] + 1] = np.rint(
             cosine_similarity_mean_ij.ravel()[
             :cosine_similarity_mean_ij.shape[1] ** 2:cosine_similarity_mean_ij.shape[1] + 1])
+
+    #
+    # if i == 1 and j + shift == 2:
+    #     print("---------After-----------")
+    #     print(curr_array)
+    #     print(r_j)
+    #     print(cosine_sim_j)
+    #     print(cosine_similarity_mean_ij)
+    #
+    #     exit()
     del r_j, r_j_mask, r_j_mask_expanded, rest_splits, curr_array, curr_mask
     del matrix_mask_ij, pid_mask_ij, curr_mask_expanded
+
     end_i = time.time()
     # print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
     gc.collect()
+
     return cosine_sim_pairwise_matrix_ij, \
         None, \
         cosine_similarity_mean_ij, \
@@ -749,7 +776,7 @@ def process_value_all(iterables_args, fixed_args):
                                        diag_idx_nkmers[1]]
     kmers_cosine_similarity_ij = np.ma.masked_array(kmers_matrix_cosine_diag_mean_ij, mask=~kmers_mask_ij,
                                                     fill_value=0.).mean(axis=2)
-    if i == j:  # Highlight: When comparing an array to itself, round to nearest integer the diagonal values, due to precision issues, sometimes it computes 0.999999999 or 1.00000002 instead of 1.
+    if i == j + shift:  # Highlight: When comparing an array to itself, round to nearest integer the diagonal values, due to precision issues, sometimes it computes 0.999999999 or 1.00000002 instead of 1.
         # Faster method that unravels the 2D array to 1D. Equivalent to: kmers_cosine_similarity_ij[np.diag_indices_from(cosine_similarity_mean_ij)] = np.rint(np.diagonal(kmers_cosine_similarity_ij))
         kmers_cosine_similarity_ij.ravel()[
         :kmers_cosine_similarity_ij.shape[1] ** 2:kmers_cosine_similarity_ij.shape[1] + 1] = np.rint(
@@ -836,7 +863,7 @@ def process_value_cosine_ondisk(iterables_args,
         kmers_cosine_similarity_ij = np.ma.masked_array(kmers_matrix_cosine_diag_mean_ij, mask=~kmers_mask_ij,
                                                         fill_value=0.).mean(axis=2)
         del kmers_matrix_cosine_diag_mean_ij, kmers_matrix_cosine_diag_ij, kmers_mask_curr_i, kmers_mask_r_j, kmers_mask_ij, kmers_matrix_cosine_ij
-    if i == j:  # Highlight: When comparing an array to itself, round to nearest integer the diagonal values, due to precision issues, sometimes it computes 0.999999999 or 1.00000002 instead of 1.
+    if i == j + shift:  # Highlight: When comparing an array to itself, round to nearest integer the diagonal values, due to precision issues, sometimes it computes 0.999999999 or 1.00000002 instead of 1.
         # Faster method that unravels the 2D array to 1D. Equivalent to: kmers_cosine_similarity_ij[np.diag_indices_from(cosine_similarity_mean_ij)] = np.rint(np.diagonal(kmers_cosine_similarity_ij))
         if calculate_kmers:
             kmers_cosine_similarity_ij.ravel()[
@@ -948,7 +975,7 @@ def process_value_pid_ondisk(iterables_args,
                                                      fill_value=0.).mean(axis=2)
         del kmers_matrix_pid_diag_ij, kmers_matrix_pid_diag_mean_ij, kmers_matrix_pid_ij, kmers_mask_curr_i, kmers_mask_r_j, kmers_mask_ij  # kmers_matrix_cosine_diag_mean_ij, kmers_matrix_cosine_diag_ij
 
-    end_i = time.time()
+    # end_i = time.time()
     # print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
     del curr_mask, r_j, r_j_mask, curr_mask_expanded, r_j_mask_expanded, pid_mask_ij, matrix_mask_ij,
 
@@ -994,7 +1021,7 @@ def process_value_all_ondisk(iterables_args,
     # rest_splits = splits[shift:] #need to copy because otherwise it slices it out inplace and disapears
 
     # Highlight: Define intermediate storing arrays #TODO: They can be even smaller to have shape sum(rest_splits.shape)
-    start_i = time.time()
+    # start_i = time.time()
     # print("###### j {} ##########################".format(j))
     # r_j = rest_splits[j] #next array
     r_j = splits.copy()[shift:][j]  # next array
@@ -1056,7 +1083,7 @@ def process_value_all_ondisk(iterables_args,
                                        diag_idx_nkmers[1]]
     kmers_cosine_similarity_ij = np.ma.masked_array(kmers_matrix_cosine_diag_mean_ij, mask=~kmers_mask_ij,
                                                     fill_value=0.).mean(axis=2)
-    if i == j:  # Highlight: When comparing an array to itself, round to nearest integer the diagonal values, due to precision issues, sometimes it computes 0.999999999 or 1.00000002 instead of 1.
+    if i == j + shift:  # Highlight: When comparing an array to itself, round to nearest integer the diagonal values, due to precision issues, sometimes it computes 0.999999999 or 1.00000002 instead of 1.
         # Faster method that unravels the 2D array to 1D. Equivalent to: kmers_cosine_similarity_ij[np.diag_indices_from(cosine_similarity_mean_ij)] = np.rint(np.diagonal(kmers_cosine_similarity_ij))
         kmers_cosine_similarity_ij.ravel()[
         :kmers_cosine_similarity_ij.shape[1] ** 2:kmers_cosine_similarity_ij.shape[1] + 1] = np.rint(
@@ -1067,7 +1094,7 @@ def process_value_all_ondisk(iterables_args,
         :cosine_similarity_mean_ij.shape[1] ** 2:cosine_similarity_mean_ij.shape[1] + 1] = np.rint(
             cosine_similarity_mean_ij.ravel()[
             :cosine_similarity_mean_ij.shape[1] ** 2:cosine_similarity_mean_ij.shape[1] + 1])
-    end_i = time.time()
+    # end_i = time.time()
     # print("Time for finishing loop (i vs j) {}".format(str(datetime.timedelta(seconds=end_i - start_i))))
     del curr_mask, r_j, r_j_mask, curr_mask_expanded, r_j_mask_expanded, kmers_mask_curr_i, kmers_mask_r_j, kmers_mask_ij
     del pid_mask_ij, kmers_matrix_pid_ij, kmers_matrix_cosine_ij, matrix_mask_ij
@@ -1277,6 +1304,7 @@ def calculate_similarities(array: Union[np.ndarray],
 
         if ksize >= max_len:
             ksize = max_len
+
         overlapping_kmers = DromiUtils.extract_windows_vectorized(splits[0], 1, max_len - ksize, ksize,
                                                                   only_windows=True)
 
@@ -1298,28 +1326,28 @@ def calculate_similarities(array: Union[np.ndarray],
         start = time.time()
         args_fixed = splits, mask_splits, n_data, max_len, overlapping_kmers, diag_idx_ksize, diag_idx_maxlen, diag_idx_nkmers, calculate_kmers
         args_iterables = DromiUtils.retrieve_iterable_indexes(splits)
-        # Highlight: For debugging, do not delete
-        cosine_similarity_mean_ij = []
-        starts_i = []
-        ends_i = []
-        starts_j = []
-        ends_j = []
-        for iter_args in zip(*args_iterables.values()):  # This works on iteration not in
-            results = process_value_cosine(iter_args, args_fixed)
-            cosine_similarity_mean_ij.append(results[2])
-            starts_i.append(results[6])
-            ends_i.append(results[7])
-            starts_j.append(results[8])
-            ends_j.append(results[9])
-        print(starts_i)
-        print(ends_i)
-        print(starts_j)
-        print(ends_j)
-        for start_i, end_i, start_j, end_j, ij in zip(starts_i, ends_i, starts_j, ends_j, cosine_similarity_mean_ij):
-            fill_array(cosine_similarity_mean, ij, start_i, end_i, start_j, end_j)
 
-        print(cosine_similarity_mean)
-        exit()
+        # Highlight: For debugging, do not delete
+        # cosine_similarity_mean_ij = []
+        # starts_i = []
+        # ends_i = []
+        # starts_j = []
+        # ends_j = []
+        # for iter_args in zip(*args_iterables.values()):  # This works on iteration not in
+        #     results = process_value_cosine(iter_args, args_fixed)
+        #     cosine_similarity_mean_ij.append(results[2])
+        #     starts_i.append(results[6])
+        #     ends_i.append(results[7])
+        #     starts_j.append(results[8])
+        #     ends_j.append(results[9])
+        # print(starts_i)
+        # print(ends_i)
+        # print(starts_j)
+        # print(ends_j)
+        # for start_i, end_i, start_j, end_j, ij in zip(starts_i, ends_i, starts_j, ends_j, cosine_similarity_mean_ij):
+        #     fill_array(cosine_similarity_mean, ij, start_i, end_i, start_j, end_j)
+        # print(cosine_similarity_mean)
+        # exit()
 
         with multiprocessing.Pool(multiprocessing.cpu_count() - 1) as pool:
             results = SimilarityParallel(metric, calculate_kmers, args_iterables, args_fixed).outer_loop(pool)
