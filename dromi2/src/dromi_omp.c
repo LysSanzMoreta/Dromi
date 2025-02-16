@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < B; ++i)
         {
             load_tensor_binary(filenames[i], &tensorA, &N, &M, &K);
-            for (int j = i+1; j < B; ++j)
+            for (int j = i; j < B; ++j)
             {
                 load_tensor_binary(filenames[j], &tensorB, &N, &M, &K);
 
@@ -124,8 +124,8 @@ int main(int argc, char* argv[]) {
                 save_matrix_binary(
                     saveFilename,
                     &matrix,
-                    &N,
-                    &N
+                    N,
+                    N
                 );
             }
         }
@@ -142,8 +142,8 @@ int main(int argc, char* argv[]) {
         save_matrix_binary(
             saveFilename,
             &matrix,
-            &N,
-            &N
+            N,
+            N
         );
 
     }
