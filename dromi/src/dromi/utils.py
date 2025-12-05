@@ -53,8 +53,10 @@ def aminoacid_names_dict(aa_types, zero_characters=[]):
     """
     if aa_types == 20:
         assert len(zero_characters) == 0, "No zero characters allowed, please set zero_characters to empty list"
-        aminoacid_names = {"R": 0, "H": 1, "K": 2, "D": 3, "E": 4, "S": 5, "T": 6, "N": 7, "Q": 8, "C": 9, "G": 10,
-                           "P": 11, "A": 12, "V": 13, "I": 14, "L": 15, "M": 16, "F": 17, "Y": 18, "W": 19}
+        # aminoacid_names = {"R": 0, "H": 1, "K": 2, "D": 3, "E": 4, "S": 5, "T": 6, "N": 7, "Q": 8, "C": 9, "G": 10,
+        #                    "P": 11, "A": 12, "V": 13, "I": 14, "L": 15, "M": 16, "F": 17, "Y": 18, "W": 19}
+        aminoacid_names = {"R": 1, "H": 2, "K": 3, "D": 4, "E": 5, "S": 6, "T": 7, "N": 8, "Q": 9, "C": 10, "G": 11,
+                           "P": 12, "A": 13, "V": 14, "I": 15, "L": 16, "M": 17, "F": 18, "Y": 19, "W": 20}
     elif aa_types == 21:
         aminoacid_names = {"R": 1, "H": 2, "K": 3, "D": 4, "E": 5, "S": 6, "T": 7, "N": 8, "Q": 9, "C": 10, "G": 11,
                            "P": 12, "A": 13, "V": 14, "I": 15, "L": 16, "M": 17, "F": 18, "Y": 19, "W": 20}
@@ -116,7 +118,7 @@ def create_blosum(aa_types, subs_matrix_name, zero_characters=[], include_zero_c
         blosum_array_dict = dict(enumerate(subs_array[1:, 1:]))
     else:
         blosum_array_dict = dict(enumerate(subs_array[1:,
-                                           2:]))  # Highlight: Changed to [1:,2:] instead of [1:,1:] to skip the scores for non-aa elements
+        2:]))  # Highlight: Changed to [1:,2:] instead of [1:,1:] to skip the scores for non-aa elements
 
     # blosum_array_dict[0] = np.full((aa_types),0)  #np.nan == np.nan is False ...
 

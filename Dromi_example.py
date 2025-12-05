@@ -69,7 +69,7 @@ def calculate_similarities_options(array: np.ndarray, max_len: Union[int, float]
     if args.runtime == "ram":
 
         results, final_time = DromiSimilarities.calculate_similarities(array, max_len, array_mask, storage_folder,
-                                                                       batch_size=2,
+                                                                       batch_size=7,
                                                                        ksize=3,
                                                                        neighbours=1,
                                                                        metric=args.metric,
@@ -94,13 +94,6 @@ def calculate_similarities_options(array: np.ndarray, max_len: Union[int, float]
                                                                                 metric=args.metric,
                                                                                 calculate_kmers=args.calculate_kmers,
                                                                                 calculate_positional_weights=args.calculate_positional_weights)
-
-    c = results.cosine_similarity_mean
-    print(c)
-    c = results.percent_identity_mean
-    print(c)
-    #
-    # exit()
 
     return results
 
@@ -197,7 +190,7 @@ def parse_args(parser):
                              '<similarities> \n'
                              '<mutualinfo>')
 
-    parser.add_argument('-runtime', type=str, nargs='?', default="ram",
+    parser.add_argument('-runtime', type=str, nargs='?', default="cuda_cpu",
                         help='How to compute/store the calculations'
                              '<ram>: Python-native The chunked results are computed and accumulated on RAM \n'
                              '<disk>: The results arrays are initialized on disk and filled up with the chunked computations made by the RAM'

@@ -1690,7 +1690,9 @@ def calculate_similarities_cuda_cpu(array: Union[np.ndarray],
 
         # Highlight: Write to binary
 
-        DromiUtils.folders("binary", storage_folder, overwite=False)
+        DromiUtils.folders("binary", storage_folder, overwrite=False)
 
-        for batch_array in len(splits):
-            DromiUtils.write_array_to_binary(f"{storage_folder}/binary", batch_array)
+        for i, batch_array in enumerate(splits):
+            DromiUtils.write_array_to_binary(f"{storage_folder}/binary/array_{i}.bin", batch_array)
+
+        return None, None
